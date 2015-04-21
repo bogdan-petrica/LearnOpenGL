@@ -31,3 +31,9 @@ Question: why is it necessary to bind/un-bind objects?
 
 Section Hello Triangle
 ----------------------
+
+OpenGL input is 3D coordinates with asociated with data and output is pixels.
+
+The transformation of the 3D input to graphic pixeles is done by the OpenGL graphics pipeline, the pipeline has two main functions:
+    # transform 3D input to 2D coordinates
+    # transform 2D coordinates to pixels on screen
