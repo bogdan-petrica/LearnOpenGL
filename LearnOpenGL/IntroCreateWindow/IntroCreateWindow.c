@@ -2,107 +2,18 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     // When a user presses the escape key, we set the WindowShouldClose property to true, 
     // closing the application
     if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     	glfwSetWindowShouldClose(window, GL_TRUE);
-}
-
-GLuint InstallShader(GLenum shaderType, const GLchar * const source)
-{
-    GLuint shaderId;
-    GLint success;
-    shaderId = glCreateShader(shaderType);
-    glShaderSource(shaderId, 1, &source, NULL);
-    glCompileShader(shaderId);
-
-    glGetShaderiv(shaderId, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar msg[512];
-        glGetShaderInfoLog(shaderId, 512, NULL, msg);
-        printf("Shader compilation failed. Msg: \"%s\".");
-        exit(1);
-    }
-
-    return shaderId;
-}
-
-GLuint InstallShaders()
-{
-    GLint success;
-
-    GLuint vertexShader;
-    GLuint fragmentShader;
-    GLuint program;
-
-    vertexShader = InstallShader(GL_VERTEX_SHADER,
-        "#version 330 core\n"
-        "layout(location = 0) in vec3 position;\n"
-        "void main()\n"
-        "{\n"
-        "gl_Position = vec4(position.x, position.y, position.z, 1.0);\n"
-        "}\n");
-
-    fragmentShader = InstallShader(GL_FRAGMENT_SHADER,
-        "#version 330 core\n"
-        "out vec4 color;\n"
-        "void main()\n"
-        "{\n"
-        "color = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-        "}\n");
-
-    program = glCreateProgram();
-    glAttachShader(program, vertexShader);
-    glAttachShader(program, fragmentShader);
-    glLinkProgram(program);
-
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success) {
-        GLchar msg[512];
-        glGetProgramInfoLog(program, 512, NULL, msg);
-        printf("Shader compilation failed. Msg: \"%s\".");
-        exit(1);
-    }
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    
-    return program;
-}
-
-GLuint GenerateVAO()
-{
-    GLfloat data[3][3] = {
-        { -0.5f, -0.5f, 0.0f },
-        { 0.5f, -0.5f, 0.0f },
-        { 0.0f, 0.5f, 0.0f } };
-
-    GLuint vao;
-    GLuint vbo;
-
-    glGenBuffers(1, &vbo);
-    glGenVertexArrays(1, &vao);
-
-    glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    return vao;         
-}
+}    
 
 int main()
 {
 	GLFWwindow* window;
-    GLuint program;
-    GLuint vao;
 	
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -126,11 +37,9 @@ int main()
 		return -1;
 	}
 
-    program = InstallShaders();
-    vao = GenerateVAO();
-
 	glViewport( 0, 0, 800, 600 );
-	glfwSetKeyCallback( window, &KeyCallback );
+
+	glfwSetKeyCallback( window, &key_callback );
 
 	while(!glfwWindowShouldClose(window))
 	{
@@ -138,12 +47,6 @@ int main()
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-
-        glUseProgram(program);
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-        glBindVertexArray(0);
-
 
 		glfwSwapBuffers(window);
 	}
