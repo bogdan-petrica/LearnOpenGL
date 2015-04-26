@@ -1,7 +1,7 @@
 Lesson 1
 
 Section OpenGL
---------------
+==============
 
 * OpenGL is API specification
 
@@ -30,10 +30,98 @@ Question: why is it necessary to bind/un-bind objects?
 
 
 Section Hello Triangle
-----------------------
+======================
 
-OpenGL input is 3D coordinates with asociated with data and output is pixels.
+OpenGL input is 3D coordinates with asociated with data ( vertex ) and output are pixels on screen.
 
-The transformation of the 3D input to graphic pixeles is done by the OpenGL graphics pipeline, the pipeline has two main functions:
+The transformation of the 3D input to graphic pixeles is done by the OpenGL graphics pipeline,
+the pipeline has two main functions:
     # transform 3D input to 2D coordinates
     # transform 2D coordinates to pixels on screen
+	
+The process is a series of steps, the steps are executed on GPU by small programs in a pipeline,
+the programs are called shaders.
+Some of the shaders are configurable by programmer.
+
+The pipeline
+	# Vertex shader
+	# Shape assembly
+	# Geometry shader
+	# Tesselation shader
+	# Test and belding
+	# Fragment shader
+	# Rasterization
+	
+	
+Vertex Shader
+-------------
+
+Transforms vertex coordinates in Normalized Device Coordinate( NDC ), which means that each coordinate
+x, y and z has to be in range [ -1.0, 1.0 ]
+
+Defines the input with a location and provides an output in gl_Position() which is a 4D vector.
+The forth dimension is not used for positioning but for perspective division.
+
+Question: what is a vertex shader?
+
+The resulting NDC coordinates will the transformed to screen coordinates via viewport transform( glViewport )
+
+VBO
+---
+
+Vertex Buffer Object = memory on the GPU where we can store data
+We can set the data for the buffer object and also specify what kind of data is:
+* never changing ( STATIC )
+* often changing( DYNAMIC )
+* chagning at each frame( STREAM )
+
+The kind of data helps with choosing the most suitable memory region for the buffer object.
+
+
+Fragment Shader
+--------------
+
+Calculates the color for different pixels. The output of the fragment shader is declared with out
+keyword and has to be of the format RGBA with components between 0.0f and 1.0f, where 0.0f means the absence
+of color for that channel and 1.0f means the complete presence.
+
+
+Displaying
+----------
+
+Once Vertex and Fragment Shaders are compiled into a program we can use them to draw.
+There can only be one active shader program, the current active shader program will be the one used
+when issuing drawing calls.
+
+After we select the programm and we have data in VBO we have to describe to OpenGL how data is
+stored, this is done by describing the vertex attributes.
+
+glVertexAttribtPoninter() specifies the following:
+* the location ( the input paramter ) that it describes
+* the size of the attribute
+* the type of data
+* the stride for each attribute
+* the offset where data in buffer starts
+
+We have to enable vertex attributes as they are disabled by default.
+
+VAO
+---
+
+Vertex Array Object = Like a VBO but the calls for vertex attributes are stored inside VAO.
+It means we don't have to repeat the glVertexAttributPointer() we just have to select the
+correct VAO.
+
+VAO remembes:
+* glEnableVertexAttribtArray calls
+* glVertexAttribtPointer calls
+* VBO associates with glVertexAttribtPointer
+
+EBO
+---
+
+Element Buffer Object = Stores indices to the vertex we want to draw, so we can save on
+space when we have multiple triangles sharing the same vertices.
+ 
+ The VAO will also store the glBindBuffer() call when called for Element Buffer Objects
+ so don't forget to not unbind it.
