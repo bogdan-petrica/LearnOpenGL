@@ -1,0 +1,129 @@
+<html>
+  <head>
+    <title>Learning OpenGl</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+    <script type="text/javascript" src="./esShader/esShader.js"></script>
+    <script type="text/javascript" src="./esShader/esUtil.js"></script>
+    <script type="text/javascript" src="./tools/tools.js"></script>
+    
+<script type="text/javascript">
+
+    UserData = function()
+    {
+        // Handle to a program object
+        this.programObject = 0;
+        
+        this.drawLoopCallback = 0;
+        
+        // Handle to vertex position VBO
+        this.vertexPosObject = 0;
+        this.indicesObject = 0;
+        
+        this.verticesArray = new Float32Array([ -0.5, -0.5, 0.0,
+                                                 0.5, -0.5, 0.0,
+                                                 0.0,  0.5, 0.0
+                                                ]);
+        this.verticesArrayChanged = -1;
+        this.indicesArray = new Uint16Array([ 0, 1, 2
+                                            ]);
+        this.indicesArrayChanged = -1;
+        this.colorsArray = new Float32Array([   0.7,  0.0, 0.0,
+                                                0.0,  0.5, 0.0,
+                                                0.0,  0.0, 0.3
+                                                ]);
+        
+        this.textureCoordinatesArray = [ 0,  1, 2 ];
+    }
+    
+    function shaderLoadedCallback(shaderText, esContext) {
+        vertexProgramObject = getShaderFromSource(gl, shaderText[0], false);
+        if (vertexProgramObject == 0 )
+            return 0;
+        fragmentProgramObject = getShaderFromSource(gl, shaderText[1], true);
+        if (fragmentProgramObject == 0 )
+            return 0;
+        esContext.userData.programObject = linkProgram(gl, vertexProgramObject, fragmentProgramObject);
+        esContext.userData.vertexAttribLoc = gl.getAttribLocation(esContext.userData.programObject, 'a_position');
+
+        gl.clearColor ( 0.0, 0.0, 0.0, 1.0 );
+        
+        esContext.drawLoopCallback(esContext);
+    }
+    
+    function shaderLoadingErrorCallback(url, esContext) {
+        alert('Failed to download "' + url + '"');
+    }
+
+    ///
+    // Initialize the shader and program object
+    //
+    function Init(esContext) {
+        loadFiles(['main.vsh', 'main.fsh'], shaderLoadedCallback,
+            shaderLoadingErrorCallback, esContext);
+
+        return true;
+    }
+
+    ///
+    // Draw a triangle using the shader pair created in Init()
+    //
+    function Draw(esContext) {
+        var userData = esContext.userData;
+
+        // If first time, initialize the Gl buffers
+        if ( userData.vertexPosObject == 0)
+        {
+            userData.vertexPosObject = gl.createBuffer(); // Tutorial: glGenBuffers(1, &VBO);
+            gl.bindBuffer(gl.ARRAY_BUFFER, userData.vertexPosObject); // Tutorial: glBindBuffer(GL_ARRAY_BUFFER, VBO);
+            gl.bufferData(gl.ARRAY_BUFFER, userData.verticesArray, gl.STATIC_DRAW); // Tutorial: glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+      
+            userData.indicesObject = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, userData.indicesObject);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, userData.indicesArray, gl.DYNAMIC_DRAW);
+        }
+
+        // Set the viewport
+        gl.viewport ( 0, 0, esContext.width, esContext.height );
+
+        // Clear the color buffer
+        gl.clear ( gl.COLOR_BUFFER_BIT );
+
+        // Use the program object
+        gl.useProgram(userData.programObject);
+
+        // Bind the vertex data
+        gl.bindBuffer(gl.ARRAY_BUFFER, userData.vertexPosObject);
+        gl.vertexAttribPointer(0, userData.verticesArray.length/3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(0);
+        //gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, userData.indicesObject);
+        gl.drawElements(gl.TRIANGLES, userData.indicesArray.length, gl.UNSIGNED_SHORT, 0);
+        return true;
+    }
+
+    function startDrawLoop(esContext) {
+        esRegisterDrawFunc(esContext, Draw);
+        esMainLoop( esContext );
+    }
+
+    function main( ) {
+        var canvas = document.getElementById("webgl-canvas");
+        var esContext = new ESContext();
+        var userData = new UserData();
+
+        esInitContext( esContext, canvas );
+        esContext.userData = userData;
+        esContext.drawLoopCallback = startDrawLoop;
+        
+        if (!Init(esContext))
+            return;
+    }
+
+</script>
+
+</head>
+  <body onload="main();">
+    <canvas id="webgl-canvas" style="border: none;" width="320" height="240"></canvas>
+</body>
+</html>
