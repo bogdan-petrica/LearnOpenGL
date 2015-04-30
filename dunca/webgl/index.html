@@ -51,7 +51,36 @@
     }
     
     function shaderLoadingErrorCallback(url, esContext) {
-        alert('Failed to download "' + url + '"');
+    	fragmentShaderSrc = "#ifdef GL_FRAGMENT_PRECISION_HIGH\n\
+    	    // Default precision\n\
+	        precision highp float;\n\
+	        #else\n\
+	            precision mediump float;\n\
+			#endif\n\
+			void main()\n\
+			{\n\
+			    gl_FragColor = vec4(1.0, 0.5, 0.2, 1.0);\n\
+			}"
+
+		vertexShaderSrc = "attribute vec4 a_position;\n\
+			attribute vec4 a_color;\n\
+			varying vec4 v_color;\n\
+			void main()\n\
+			{\n\
+			    gl_Position = a_position; // Tutorial: gl_Position = vec4(position.x, position.y, position.z, 1.0);\n\
+			}"
+        vertexProgramObject = getShaderFromSource(gl, vertexShaderSrc, false);
+        if (vertexProgramObject == 0 )
+            return 0;
+        fragmentProgramObject = getShaderFromSource(gl, fragmentShaderSrc, true);
+        if (fragmentProgramObject == 0 )
+            return 0;
+        esContext.userData.programObject = linkProgram(gl, vertexProgramObject, fragmentProgramObject);
+        esContext.userData.vertexAttribLoc = gl.getAttribLocation(esContext.userData.programObject, 'a_position');
+
+        gl.clearColor ( 0.0, 0.0, 0.0, 1.0 );
+        
+        esContext.drawLoopCallback(esContext);
     }
 
     ///
