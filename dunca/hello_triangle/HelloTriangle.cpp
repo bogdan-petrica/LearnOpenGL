@@ -31,26 +31,61 @@ struct StateData
     const GLuint vertexAttribPos;
 };
 
-struct VaoObject
+struct Object
 {
     // We want as much data in here as we could in order to
     // minimizes switching of VBOs
     GLuint mVbo;
     GLuint mVerticesCount;
+    GLuint mEbo;
+    GLuint mIndicesCount;
+    bool mHasEbo;
 
 public:
     GLuint mProgram; // Transformation and material
     GLuint mVao;
 
-    void setup(GLuint vertexAttribPos, const GLfloat* triangleV, GLuint verticesCount)
+    bool setup(GLuint vertexAttribPos,
+        const GLfloat* vertices, GLuint verticesCount,
+        const GLuint* indices = NULL, GLuint indicesCount = 0,
+        Object* obj = NULL )
     {
-        // Setup vertex buffer to keep the vertices
-        glGenBuffers( 1, &mVbo );
-        // Bind the newly created buffer to the array buffer target
-        glBindBuffer( GL_ARRAY_BUFFER,  mVbo );
-        // Upload buffer to GPU in its provided location
-        glBufferData( GL_ARRAY_BUFFER, verticesCount * sizeof(GLfloat), triangleV, GL_STATIC_DRAW );
-        mVerticesCount = verticesCount;
+        if(vertices != NULL)
+        {
+            // Setup vertex buffer to keep the vertices
+            glGenBuffers( 1, &mVbo );
+            // Bind the newly created buffer to the array buffer target
+            glBindBuffer( GL_ARRAY_BUFFER, mVbo );
+            // Upload buffer to GPU in its provided location
+            glBufferData( GL_ARRAY_BUFFER, verticesCount * sizeof(GLfloat), vertices, GL_STATIC_DRAW );
+            mVerticesCount = verticesCount;
+        }
+        else if( obj != NULL )
+        {
+            mVbo = obj->mVbo;
+            mVerticesCount = obj->mVerticesCount;
+        }
+        else
+        {
+            return false;
+        }
+        // Setup EBO if needed
+        if(indices != NULL)
+        {
+            // Setup vertex buffer to keep the vertices
+            glGenBuffers( 1, &mEbo );
+            // Bind the newly created buffer to the array buffer target
+            glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,  mEbo );
+            // Upload buffer to GPU in its provided location
+            glBufferData( GL_ELEMENT_ARRAY_BUFFER, indicesCount * sizeof(GLuint),
+                indices, GL_STATIC_DRAW );
+            mIndicesCount = indicesCount;
+            mHasEbo = true;
+        }
+        else
+        {
+            mHasEbo = false;
+        }
 
         // Generate VAO to represent object data on GPU
         glGenVertexArrays(1, &mVao);
@@ -58,6 +93,10 @@ public:
         glBindVertexArray(mVao);
         {
             glBindBuffer(GL_ARRAY_BUFFER, mVbo);
+            if(mHasEbo)
+            {
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEbo);
+            }
             // Setup properties vertex data attribute
             glVertexAttribPointer(vertexAttribPos, 3, GL_FLOAT, GL_FALSE,
                 3*sizeof(GLfloat), static_cast<GLvoid*>(0));
@@ -65,6 +104,7 @@ public:
         }
         // End of binding VAO setup
         glBindVertexArray(0);
+        return true;
     }
 
     void draw()
@@ -72,7 +112,14 @@ public:
         glUseProgram(mProgram);
         glBindVertexArray(mVao);
         // Draw triangles
-        glDrawArrays(GL_TRIANGLES, 0, mVerticesCount);
+        if(mHasEbo)
+        {
+            glDrawElements(GL_TRIANGLES, mIndicesCount, GL_UNSIGNED_INT, 0);
+        }
+        else
+        {
+            glDrawArrays(GL_TRIANGLES, 0, mVerticesCount);
+        }
         // Unbind this VAO
         glBindVertexArray(0);
     }
@@ -130,8 +177,8 @@ struct SceneData
     static const char* redFragmentShaderSz;
     static const char* greenFragmentShaderSz;
 
-    static VaoObject triangle;
-    static VaoObject rectangle;
+    static Object triangle;
+    static Object rectangle;
 
     static bool
     setup(StateData& state )
@@ -149,24 +196,32 @@ struct SceneData
         glDeleteShader(state.redFragmentShader);
         glDeleteShader(state.greenFragmentShader);
 
-        triangle.mProgram = state.redProgramId;
-        // Counterclockwise to look at the front-face ( screen space )
-        const GLfloat triangleV[] = { -0.8f, -0.8f, 0.0f,
-            0.8f, -0.8f, 0.0f,
-            0.0f,  0.8f, 0.0f };
-        const GLuint triangleVVertCount = sizeof(triangleV)/sizeof(triangleV[0]);
-        triangle.setup(state.vertexAttribPos, triangleV, triangleVVertCount);
+        if(ok)
+        {
+            const GLfloat allVertices[] = {
+               -0.8f, -0.8f, 0.0f, // bottom-left
+                0.8f, -0.8f, 0.0f, // bottom-right
+                0.8f,  0.8f, 0.0f, // top-right
+                0.0f,  0.8f, 0.0f, // top-center
+               -0.8f,  0.8f, 0.0f }; // top-left
 
-        rectangle.mProgram = state.greenProgramId;
-        const GLfloat rectangleV[] = { -0.8f, -0.8f, 0.0f,
-            0.8f, -0.8f, 0.0f,
-            0.8f,  0.8f, 0.0f,
-            0.8f,  0.8f, 0.0f,
-           -0.8f,  0.8f, 0.0f,
-           -0.8f, -0.8f, 0.0f};
-        const GLuint rectangleVVertCount = sizeof(rectangleV)/sizeof(rectangleV[0]);
-        rectangle.setup(state.vertexAttribPos, rectangleV, rectangleVVertCount);
-
+            triangle.mProgram = state.redProgramId;
+            // Counterclockwise to look at the front-face ( screen space )
+            const GLuint triangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
+                3/*top-center*/ };
+            ok = triangle.setup(state.vertexAttribPos, // This should correspond to vertex shader attribute layout
+                allVertices, sizeof(allVertices)/sizeof(allVertices[0]),
+                triangleIndices, sizeof(triangleIndices)/sizeof(triangleIndices[0]));
+            if(ok)
+            {
+                rectangle.mProgram = state.greenProgramId;
+                const GLuint rectangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
+                    2/*top-right*/, 2/*top-right*/, 4/*top-left*/, 0/*bottom-left*/ };
+                ok = rectangle.setup(state.vertexAttribPos, NULL, 0,
+                    rectangleIndices, sizeof(rectangleIndices)/sizeof(rectangleIndices[0]),
+                    &triangle ); // We reuse the same vertex buffer that triangle uses
+            }
+        }
         return ok;
     }
 
@@ -198,8 +253,8 @@ struct SceneData
     }
 };
 
-VaoObject SceneData::triangle;
-VaoObject SceneData::rectangle;
+Object SceneData::triangle;
+Object SceneData::rectangle;
 
 // Inline shaders source code
 const char* SceneData::vertexShaderSz ="\n\
