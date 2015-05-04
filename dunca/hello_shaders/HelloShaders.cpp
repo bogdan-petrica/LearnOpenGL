@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <iostream>
 
+#include "shader.h"
+
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
@@ -24,12 +26,6 @@ struct StateData
 
     }
 
-    GLuint vertexShader;
-    GLuint scaleVertexShader;
-    GLuint redFragmentShader;
-    GLuint greenFragmentShader;
-    GLuint redProgramId;
-    GLuint greenProgramId;
     const GLuint vertexAttribPos;
     const GLuint colorAttribPos;
 };
@@ -46,7 +42,7 @@ class Object
 
 public:
 
-    GLuint mProgram; // Transformation and material
+    Shader mProgram; // Transformation and material
     GLuint mVao;
 
     virtual bool configUniforms()
@@ -130,7 +126,7 @@ public:
 
     void draw()
     {
-        glUseProgram(mProgram);
+        mProgram.Use();
         // Update uniforms after program is set otherwise glUniform* calls won't work
         updateUniforms();
 
@@ -149,58 +145,13 @@ public:
     }
 };
 
-bool
-compileShader(const char* source, GLuint& id, bool vertexShader)
-{
-    // Create a new shader
-    id = glCreateShader( vertexShader ? GL_VERTEX_SHADER : GL_FRAGMENT_SHADER );
-    // Provide shader source
-    glShaderSource(id, 1, &source, NULL);
-    // Compile shader
-    glCompileShader(id);
-
-    GLint compiled = GL_FALSE;
-    glGetShaderiv(id, GL_COMPILE_STATUS, &compiled);
-    if(!compiled)
-    {
-        GLchar errorMessage[512];
-        glGetShaderInfoLog(id, sizeof(errorMessage), NULL, errorMessage);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << errorMessage << std::endl;
-    }
-    return (compiled == GL_TRUE);
-}
-
-bool
-createProgram(GLuint& id, GLuint* firstShader, GLuint* secondShader)
-{
-    bool ok = true;
-    id = glCreateProgram();
-    if(firstShader != NULL)
-    {
-        glAttachShader(id, *firstShader);
-    }
-    if(secondShader != NULL)
-    {
-        glAttachShader(id, *secondShader);
-    }
-    glLinkProgram(id);
-    GLint linked = GL_FALSE;
-    glGetProgramiv(id, GL_LINK_STATUS, &linked);
-    if(!linked)
-    {
-        GLchar errorMessage[512];
-        glGetProgramInfoLog(id, sizeof(errorMessage), NULL, errorMessage);
-    }
-    return ok;
-}
-
 class TriangleObject: public Object
 {
 public:
     bool
     configUniforms()
     {
-        mUniformLocation = glGetUniformLocation(mProgram, "arg");
+        mUniformLocation = glGetUniformLocation(mProgram.Program, "arg");
         return mUniformLocation != -1;
     }
 
@@ -230,48 +181,30 @@ struct SceneData
     static bool
     setup(StateData& state )
     {
-        // Compile both shaders
-        bool ok = compileShader(vertexShaderSz, state.vertexShader, true);
-        ok = ok && compileShader(scaleVertexShaderSz, state.scaleVertexShader, true);
-        ok = ok && compileShader(redFragmentShaderSz, state.redFragmentShader, false);
-        ok = ok && createProgram(state.redProgramId, &state.scaleVertexShader,
-            &state.redFragmentShader);
-        ok = ok && compileShader(greenFragmentShaderSz, state.greenFragmentShader, false);
-        ok = ok && createProgram(state.greenProgramId, &state.vertexShader,
-            &state.greenFragmentShader);
-        // Cleanup shaders
-        glDeleteShader(state.vertexShader);
-        glDeleteShader(state.scaleVertexShader);
-        glDeleteShader(state.redFragmentShader);
-        glDeleteShader(state.greenFragmentShader);
-
-        if(ok)
-        {
-            const GLfloat allVertices[] = {
+        const GLfloat allVertices[] = {
                -0.8f, -0.8f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
                 0.8f, -0.8f, 0.0f, 0.0f, 1.0f, 0.0f,// bottom-right
                 0.8f,  0.8f, 0.0f, 0.0f, 1.0f, 1.0f,// top-right
                 0.0f,  0.8f, 0.0f, 0.0f, 0.0f, 1.0f,// top-center
                -0.8f,  0.8f, 0.0f, 1.0f, 1.0f, 0.0f }; // top-left
 
+        // Set program before setup where uniforms location is retrieved
+        bool ok = triangle.mProgram.load(scaleVertexShaderSz, redFragmentShaderSz);
+        // Counterclockwise to look at the front-face ( screen space )
+        const GLuint triangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
+            3/*top-center*/ };
+        ok = ok && triangle.setup(state.vertexAttribPos, state.colorAttribPos, // This should correspond to vertex shader attribute layout
+            allVertices, sizeof(allVertices)/sizeof(allVertices[0]),
+            triangleIndices, sizeof(triangleIndices)/sizeof(triangleIndices[0]));
+        if(ok)
+        {
             // Set program before setup where uniforms location is retrieved
-            triangle.mProgram = state.redProgramId;
-            // Counterclockwise to look at the front-face ( screen space )
-            const GLuint triangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
-                3/*top-center*/ };
-            ok = triangle.setup(state.vertexAttribPos, state.colorAttribPos, // This should correspond to vertex shader attribute layout
-                allVertices, sizeof(allVertices)/sizeof(allVertices[0]),
-                triangleIndices, sizeof(triangleIndices)/sizeof(triangleIndices[0]));
-            if(ok)
-            {
-                // Set program before setup where uniforms location is retrieved
-                rectangle.mProgram = state.greenProgramId;
-                const GLuint rectangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
-                    2/*top-right*/, 2/*top-right*/, 4/*top-left*/, 0/*bottom-left*/ };
-                ok = rectangle.setup(state.vertexAttribPos, state.colorAttribPos, NULL, 0,
-                    rectangleIndices, sizeof(rectangleIndices)/sizeof(rectangleIndices[0]),
-                    &triangle ); // We reuse the same vertex buffer that triangle uses
-            }
+            rectangle.mProgram.load(vertexShaderSz, greenFragmentShaderSz);
+            const GLuint rectangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
+                2/*top-right*/, 2/*top-right*/, 4/*top-left*/, 0/*bottom-left*/ };
+            ok = rectangle.setup(state.vertexAttribPos, state.colorAttribPos, NULL, 0,
+                rectangleIndices, sizeof(rectangleIndices)/sizeof(rectangleIndices[0]),
+                &triangle ); // We reuse the same vertex buffer that triangle uses
         }
         return ok;
     }
@@ -279,7 +212,6 @@ struct SceneData
     static void
     tearDown(StateData& state)
     {
-        glDeleteProgram(state.redProgramId);
     }
 
     static void
@@ -309,52 +241,13 @@ Object SceneData::rectangle;
 
 // Inline shaders source code
 // Inline shaders source code
-const char* SceneData::scaleVertexShaderSz ="\n\
-                                       #version 330 core\n\
-                                       layout (location = 0) in vec3 position;\n\
-                                       layout (location = 1) in vec3 color;\n\
-                                       out vec3 interpolatedColor;\n\
-                                       uniform float arg;\n\
-                                       float map(float v, float fB, float fE, float sB, float sE)\n\
-                                       {\n\
-                                        return sB + ((v - fB)*((sE - sB)/(fE - fB)));\n\
-                                       };\n\
-                                       void main()\n\
-                                       {\n\
-                                        vec3 pos = map(arg, 0.0f, 1.0f, 0.9f, 1.0f) * vec3(position.x, position.y, position.z);\n\
-                                        gl_Position = vec4(pos, 1.0f);\n\
-                                        interpolatedColor = color;\n\
-                                       }";
+const char* SceneData::scaleVertexShaderSz ="../../../dunca/hello_shaders/multicolor.vs";
 
-const char* SceneData::vertexShaderSz ="\n\
-                                       #version 330 core\n\
-                                       layout (location = 0) in vec3 position;\n\
-                                       layout (location = 1) in vec3 color;\n\
-                                       out vec3 interpolatedColor;\n\
-                                       void main()\n\
-                                       {\n\
-                                        gl_Position = vec4(position.x, position.y, position.z, 1.0f);\n\
-                                        interpolatedColor = color;\n\
-                                       }";
+const char* SceneData::vertexShaderSz ="../../../dunca/hello_shaders/green.vs";
 
-const char* SceneData::redFragmentShaderSz = "\n\
-                                          #version 330 core\n\
-                                          out vec4 color;\n\
-                                          in vec3 interpolatedColor;\n\
-                                          uniform float arg;\n\
-                                          void main()\n\
-                                          {\n\
-                                            color = vec4(interpolatedColor * arg, 1.0f);\n\
-                                          }";
+const char* SceneData::redFragmentShaderSz = "../../../dunca/hello_shaders/multicolor.frag";
 
-const char* SceneData::greenFragmentShaderSz = "\n\
-                                             #version 330 core\n\
-                                             out vec4 color;\n\
-                                             in vec3 interpolatedColor;\n\
-                                             void main()\n\
-                                             {\n\
-                                             color = vec4(interpolatedColor, 1.0f);\n\
-                                             }";
+const char* SceneData::greenFragmentShaderSz = "../../../dunca/hello_shaders/green.frag";
 
 int main()
 {
