@@ -76,11 +76,6 @@ GLuint InstallShaders()
 
 GLuint GenerateVAO()
 {
-    //GLfloat data[3][3] = {
-    //    { -0.5f, -0.5f, 0.0f },
-    //    { 0.5f, -0.5f, 0.0f },
-    //    { 0.0f, 0.5f, 0.0f } };
-
     GLfloat vertices[][3] = {
         { 0.5f, 0.5f, 0.0f }, // Top Right
         { 0.5f, -0.5f, 0.0f }, // Bottom Right
