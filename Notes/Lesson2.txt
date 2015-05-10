@@ -1,0 +1,60 @@
+Lesson 2
+
+Section Shaders
+===============
+
+Shaders are programs on GPU written in GLSL language, a C like language.
+
+Each shader has:
+* version
+* inputs
+* outputs
+* uniforms
+* it's main function
+
+When we discuss about vertex shader the inputs are also called vertex attributes.
+There is a limit to the amount of vertex attributes but at least 16 4 component
+vertex attributes are available by the standard of OpenGL.
+
+Types
+-----
+
+Basic types: bools, floats, ints, doubles.
+Container types: vector and matricies.
+
+Vectors have 2, 3 or 4 components, the components can be accessed with .x, .y, .z or .w
+or rgba.
+
+Vector swizzling can be used for rearrganment of components.
+
+	vec2 in;
+	vec4 out = in.xxyx
+	
+Also constructors of vector can take other vectors as arguments.
+
+	vec4 out( vec2.xxy, 1.0f )
+	
+
+Ins and outs
+------------
+
+Vertex shader takes its input from memory, that is the reason we have to link the
+input to a reference via location attribute, while the fragment shader takes its
+input from the previous set of the processing pipeline.
+
+Also the fragment shader has to output the values as vec4 ( float vector of 4 elements )
+which indicates the color of the fragment.
+
+Uniforms
+--------
+
+Another input method, however they are global for the shader program until they are
+updated or reset. When setting the value for the uniform the program has to be in use.
+
+Fragment shader
+---------------
+
+When rasterizing the pipeline generates many more fragments for each vertex. Each fragment
+has a position in the triangle, based on fragment position the pipeline generates
+the actual input to the fragment shader as a combination of the fragments inputs, this is
+calle fragment interpolation.
