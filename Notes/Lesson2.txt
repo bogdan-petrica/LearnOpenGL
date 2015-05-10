@@ -58,3 +58,13 @@ When rasterizing the pipeline generates many more fragments for each vertex. Eac
 has a position in the triangle, based on fragment position the pipeline generates
 the actual input to the fragment shader as a combination of the fragments inputs, this is
 calle fragment interpolation.
+
+TODO:
+	* finish taking notes
+	* explain the black affect when setting the colors to positions
+	
+Problems/issues:
+	* the size of the element instead of count + size when specifing the vertex attribute( generates null pointer exception ). How do we debug?
+	* getting the uniform location does not work until setting the program
+	
+	
