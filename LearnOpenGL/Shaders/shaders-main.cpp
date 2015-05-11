@@ -73,6 +73,7 @@ int main()
 
     glBindVertexArray(0); // Unbind VAO
 
+    GLfloat horiz_displacement = -0.5f;
 
     // Game loop
     while (!glfwWindowShouldClose(window))
@@ -85,8 +86,21 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Draw the triangle
+        //update sin
+        GLfloat timeValue = glfwGetTime();
+        GLfloat vert_displacement = (sin(timeValue) / 2) + 0.001f;
+         horiz_displacement += 0.0001f; // magic number for my pc on debug mode :))
+         if( horiz_displacement > 0.6f )
+         {
+             horiz_displacement = -0.5f;
+         }
+
         ourShader.Use();
+
+        GLint vertexOffset = glGetUniformLocation(ourShader.Program, "horiz_offset");
+        glUniform4f( vertexOffset, horiz_displacement ,vert_displacement, 0.0f, 1.0f );
+
+        // Draw the triangle
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         glBindVertexArray(0);
