@@ -8,5 +8,5 @@ uniform vec4 horiz_offset;
 void main()
 {
     gl_Position = vec4( position.x + horiz_offset.x, -position.y + horiz_offset.y, position.z, 1.0f);
-    ourColor = color;
+    ourColor = vec3( gl_Position.x, gl_Position.y, gl_Position.z );
 }
