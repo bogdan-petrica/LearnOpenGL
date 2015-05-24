@@ -13,6 +13,8 @@
 #include "VertexArrayObject.h"
 #include "Uniform.h"
 
+#include "SOIL.h"
+
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     // When a user presses the escape key, we set the WindowShouldClose property to true, 

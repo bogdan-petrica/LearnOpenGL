@@ -1,6 +1,7 @@
 
 include_directories( "../External/glfw/include" )
 include_directories( "../External/glew/include" )
+include_directories( "../External/SOIL" )
 include_directories( "Common" )
 add_subdirectory( Common )
 add_subdirectory( IntroCreateWindow )
