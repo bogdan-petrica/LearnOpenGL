@@ -56,8 +56,8 @@ Fragment shader
 
 When rasterizing the pipeline generates many more fragments for each vertex. Each fragment
 has a position in the triangle, based on fragment position the pipeline generates
-the actual input to the fragment shader as a combination of the fragments inputs, this is
-calle fragment interpolation.
+the actual input to the fragment shader as an weighed average of the vertex outputs, this is
+called fragment interpolation.
 
 TODO:
 	* finish taking notes
@@ -67,4 +67,18 @@ Problems/issues:
 	* the size of the element instead of count + size when specifing the vertex attribute( generates null pointer exception ). How do we debug?
 	* getting the uniform location does not work until setting the program
 	
-	
+Exercises
+---------
+1) Reverse the triangle in the VertexShader:
+Supply -y as the Y coordinate of the gl_Position attribute.
+
+2) Done. See Shaders project.
+
+3) The color is the interpolation of the inputs, in our case the positions.
+Positions interpolated with the position factor give back positions, that means
+colors are calculated by the actual position on the screen.
+
+The bottom left part of the triangle is the neagtive values of the X and Y domain
+( Z is constant ), that means the bottom left colors have negative values, probably
+OpenGL clamps the RBG components of a color to [0.0, 1.0] interval and that means the
+actual used color is ( 0.0, 0.0, 0.0 ) which is BLACK.
