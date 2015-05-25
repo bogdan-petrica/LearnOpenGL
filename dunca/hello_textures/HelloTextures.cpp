@@ -1,5 +1,7 @@
 #define GLEW_STATIC
 
+#include "tools.h"
+
 #include "object.h"
 #include "shader.h"
 #include "material.h"
@@ -29,30 +31,9 @@ struct StateData
 class ColorMaterial: public Material
 {
 public:
-    bool
-    configUniforms()
-    {
-        mUniformLocation = glGetUniformLocation(mProgram.Program, "arg");
-        return mUniformLocation != -1;
-    }
+    bool vertexShader(std::string& code) const { return Tools::readFile(code, vertexShaderSz); };
+    bool fragmentShader(std::string& code) const { return Tools::readFile(code, greenFragmentShaderSz); };
 
-    bool 
-    updateUniforms()
-    {
-        glUniform1f(mUniformLocation, static_cast<GLfloat>( abs(sin(glfwGetTime())) ));
-        return true; // Do nothing, just a way for subclass to update uniforms
-    }
-    
-    GLuint vertexAttribPos() const { return 0; }; // Bind vertex data to first attribute "layout (location = 0)"
-    GLuint colorAttribPos() const { return 1; }; // Bind color data to the second attribute "layout (location = 1)"
-
-private:
-    GLuint mUniformLocation;
-};
-
-class TextureMaterial: public Material
-{
-public:
     bool
     configUniforms()
     {
@@ -62,61 +43,121 @@ public:
     bool 
     updateUniforms()
     {
+        return true;
+    }
+    
+    GLuint vertexAttribPos() const { return 0; }; // Bind vertex data to first attribute "layout (location = 0)"
+    GLuint colorAttribPos() const { return 1; }; // Bind color data to the second attribute "layout (location = 1)"
+
+private:
+    // Inline shaders source code
+    static const char* vertexShaderSz;
+    static const char* greenFragmentShaderSz;
+};
+
+const char* ColorMaterial::vertexShaderSz ="../../../dunca/hello_shaders/green.vs";
+const char* ColorMaterial::greenFragmentShaderSz = "../../../dunca/hello_shaders/green.frag";
+
+class TextureMaterial: public Material
+{
+public:
+
+    bool vertexShader(std::string& code) const
+    {
+        return Tools::readFile(code, scaleTextureVertexShaderSz);
+    };
+    bool fragmentShader(std::string& code) const
+    {
+        return Tools::readFile(code, textureFragmentShaderSz);
+    };
+
+    bool
+    configUniforms()
+    {
+        mUniformLocation = glGetUniformLocation(mProgram.GetProgram(), "globalArg");
+        mCrateTextLoc = glGetUniformLocation(mProgram.GetProgram(), "crateTextureUnit");
+        mSmileTextLoc = glGetUniformLocation(mProgram.GetProgram(), "smileTextureUnit");
+        return mUniformLocation != -1;
+    }
+
+    bool 
+    updateUniforms()
+    {
+        glUniform1f(mUniformLocation, static_cast<GLfloat>( abs(sin(glfwGetTime())) ));
+        glUniform1i(mCrateTextLoc, 0);
+        glUniform1i(mSmileTextLoc, 1);
         return true; // Do nothing, just a way for subclass to update uniforms
     }
 
     GLuint vertexAttribPos() const { return 0; }; // Bind vertex data to first attribute "layout (location = 0)"
     GLuint colorAttribPos() const { return 1; }; // Bind color data to the second attribute "layout (location = 1)"
+    GLuint textCoordAttribPos() const { return 2; }; // Bind texture data to the third attribute "layout (location = 2)"
 
 private:
     GLuint mUniformLocation;
+    GLuint mCrateTextLoc;
+    GLuint mSmileTextLoc;
+
+    // Inline shaders source code
+    static const char* scaleTextureVertexShaderSz;
+    static const char* textureFragmentShaderSz;
 };
 
+const char* TextureMaterial::scaleTextureVertexShaderSz ="../../../dunca/hello_textures/texture.vs";
+const char* TextureMaterial::textureFragmentShaderSz = "../../../dunca/hello_textures/texture.frag";
 
 struct SceneData
 {
-    // Inline shaders source code
-    static const char* scaleVertexShaderSz;
-    static const char* vertexShaderSz;
-    static const char* redFragmentShaderSz;
-    static const char* greenFragmentShaderSz;
-
     static Object triangle;
     static Object rectangle;
 
     static bool
     setup(StateData& state )
     {
+        const static GLfloat KRadius = 0.9f;
         const GLfloat allVertices[] = {
-               -0.8f, -0.8f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom-left
-                0.8f, -0.8f, 0.0f, 0.0f, 1.0f, 0.0f,// bottom-right
-                0.8f,  0.8f, 0.0f, 0.0f, 1.0f, 1.0f,// top-right
-                0.0f,  0.8f, 0.0f, 0.0f, 0.0f, 1.0f,// top-center
-               -0.8f,  0.8f, 0.0f, 1.0f, 1.0f, 0.0f }; // top-left
+               -KRadius, -KRadius, 0.0f,    1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // bottom-left
+                KRadius, -KRadius, 0.0f,    0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom-right
+                KRadius,  KRadius, 0.0f,    0.0f, 1.0f, 1.0f,   1.0f, 1.0f, // top-right
+                0.0f,  KRadius, 0.0f,       0.0f, 0.0f, 1.0f,   0.5f, 1.0f, // top-center
+               -KRadius,  KRadius, 0.0f,    1.0f, 1.0f, 0.0f,   0.0f, 1.0f }; // top-left
         
-        std::unique_ptr<ColorMaterial> colorMaterial(new ColorMaterial());
-        bool ok = colorMaterial->mProgram.load(scaleVertexShaderSz, redFragmentShaderSz);
+        std::shared_ptr<Texture> triangleTextures = std::make_shared<Texture>();
+        bool ok = triangleTextures->loadFromFile(mCrateTexturePath);
+        ok = ok && triangleTextures->loadFromFile(mSmileTexturePath, true);
+        std::shared_ptr<TextureMaterial> textureMaterial = std::make_shared<TextureMaterial>();
+        // Set program before setup where uniforms location is retrieved
+        ok = ok && textureMaterial->setup(triangleTextures);
         if(ok)
         {
             // Set program before setup where uniforms location is retrieved
-            triangle.mMaterial = colorMaterial.release();
+            triangle.setMaterial(textureMaterial);
 
-            std::unique_ptr<TextureMaterial> textureMaterial(new TextureMaterial());
-            // Set program before setup where uniforms location is retrieved
-            ok = textureMaterial->mProgram.load(vertexShaderSz, greenFragmentShaderSz);
-            if(ok) rectangle.mMaterial = textureMaterial.release();
+            std::shared_ptr<ColorMaterial> colorMaterial = std::make_shared<ColorMaterial>();
+            ok = colorMaterial->setup();
+            if(ok) rectangle.setMaterial(colorMaterial);
         }
 
-        // Counterclockwise to look at the front-face ( screen space )
-        const GLuint triangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
-            3/*top-center*/ };
-        ok = ok && triangle.setup(allVertices, sizeof(allVertices)/sizeof(allVertices[0]),
-            triangleIndices, sizeof(triangleIndices)/sizeof(triangleIndices[0]), 3 * sizeof(GLfloat));
-        const GLuint rectangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
-            2/*top-right*/, 2/*top-right*/, 4/*top-left*/, 0/*bottom-left*/ };
-        ok = rectangle.setup(NULL, 0,
-            rectangleIndices, sizeof(rectangleIndices)/sizeof(rectangleIndices[0]), 3 * sizeof(GLfloat),
-            &triangle ); // We reuse the same vertex buffer that triangle uses
+        {
+            // Counterclockwise to look at the front-face ( screen space )
+            const GLuint triangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
+                3/*top-center*/ };
+            Object::GeometryParameters params;
+            params.vertices = allVertices;
+            params.verticesCount = sizeof(allVertices)/sizeof(allVertices[0]);
+            params.indices = triangleIndices;
+            params.indicesCount = sizeof(triangleIndices)/sizeof(triangleIndices[0]);
+            ok = ok && triangle.setup(params);
+        }
+        {
+            const GLuint rectangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
+                2/*top-right*/, 2/*top-right*/, 4/*top-left*/, 0/*bottom-left*/ };
+            Object::GeometryParameters params;
+            params.indices = rectangleIndices;
+            params.indicesCount = sizeof(rectangleIndices)/sizeof(rectangleIndices[0]);
+            params.obj = &triangle; // We reuse the same vertex buffer that triangle uses
+            ok = rectangle.setup(params);
+        }
         return ok;
     }
 
@@ -132,33 +173,22 @@ struct SceneData
         glClearColor( bkColor[0], bkColor[1], bkColor[2], 1.0f );
         glClear(GL_COLOR_BUFFER_BIT);
 
-        static unsigned int frameCount = 0;
-        if(frameCount % 10000 > 5000)
-        {
-            // Draw the freaking triangle
-            triangle.draw();
-        }
-        else
-        {
-            // Every 100 frames switch to drawing rectangle and vice versa
-            rectangle.draw();
-        }
-        ++frameCount;
+        // Every 100 frames switch to drawing rectangle and vice versa
+        rectangle.draw();
+        // Draw the freaking triangle
+        triangle.draw();
     }
+
+private:
+    static const char* mCrateTexturePath;
+    static const char* mSmileTexturePath;
 };
+
+const char* SceneData::mCrateTexturePath = "../../../dunca/res/container.jpg";
+const char* SceneData::mSmileTexturePath = "../../../dunca/res/awesome_face.png";
 
 Object SceneData::triangle;
 Object SceneData::rectangle;
-
-// Inline shaders source code
-// Inline shaders source code
-const char* SceneData::scaleVertexShaderSz ="../../../dunca/hello_shaders/multicolor.vs";
-
-const char* SceneData::vertexShaderSz ="../../../dunca/hello_shaders/green.vs";
-
-const char* SceneData::redFragmentShaderSz = "../../../dunca/hello_shaders/multicolor.frag";
-
-const char* SceneData::greenFragmentShaderSz = "../../../dunca/hello_shaders/green.frag";
 
 int main()
 {

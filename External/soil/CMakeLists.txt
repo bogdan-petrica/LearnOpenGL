@@ -36,7 +36,9 @@ set(CMAKE_C_FLAGS "${CFLAGS} ${CMAKE_C_FLAGS} -O2 -s -Wall" )
 
 include_directories( ${PROJECT_SOURCE_DIR}/src )
 
-add_library(SOIL_static STATIC src/SOIL.c )
+file(GLOB SOIL_local_SRC ${PROJECT_SOURCE_DIR}/src/*.c)
+
+add_library(SOIL_static STATIC ${SOIL_local_SRC} )
 
 set_target_properties(SOIL_static PROPERTIES OUTPUT_NAME ${SOIL_LIB_NAME} PREFIX lib)
 

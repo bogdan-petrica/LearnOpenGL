@@ -9,46 +9,43 @@
 #include <iostream>
 
 
+const GLenum Object::GeometryParameters::attribsCount[AttribOrder_Count] = {3, 3, 2};
+const unsigned char Object::GeometryParameters::defaultTypeSize = sizeof(GLfloat);
+
 bool
-Object::setup(const GLfloat* vertices, GLuint verticesCount,
-        const GLuint* indices/*= NULL*/, GLuint indicesCount/*= 0*/,
-        GLuint colorTypeSize/*= 0*/, Object* obj/*= NULL*/ )
+Object::setup(const GeometryParameters& p, GeometryParamsExt* ext/*=nullptr*/)
 {
-    if(vertices != NULL)
+    if(p.vertices != nullptr)
     {
         // Setup vertex buffer to keep the vertices
         glGenBuffers( 1, &mVbo );
         // Bind the newly created buffer to the array buffer target
         glBindBuffer( GL_ARRAY_BUFFER, mVbo );
         // Upload buffer to GPU in its provided location
-        glBufferData( GL_ARRAY_BUFFER, verticesCount * sizeof(GLfloat), vertices, GL_STATIC_DRAW );
-        mVerticesCount = verticesCount;
+        glBufferData( GL_ARRAY_BUFFER, p.verticesCount * sizeof(GLfloat),
+            p.vertices, GL_STATIC_DRAW );
+        mVerticesCount = p.verticesCount;
     }
-    else if( obj != NULL )
+    else if( p.obj != NULL )
     {
-        mVbo = obj->mVbo;
-        mVerticesCount = obj->mVerticesCount;
+        mVbo = p.obj->mVbo;
+        mVerticesCount = p.obj->mVerticesCount;
     }
     else
     {
         return false;
     }
     // Setup EBO if needed
-    if(indices != NULL)
+    if(p.indices != NULL)
     {
         // Setup vertex buffer to keep the vertices
         glGenBuffers( 1, &mEbo );
         // Bind the newly created buffer to the array buffer target
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,  mEbo );
         // Upload buffer to GPU in its provided location
-        glBufferData( GL_ELEMENT_ARRAY_BUFFER, indicesCount * sizeof(GLuint),
-            indices, GL_STATIC_DRAW );
-        mIndicesCount = indicesCount;
-        mHasEbo = true;
-    }
-    else
-    {
-        mHasEbo = false;
+        glBufferData( GL_ELEMENT_ARRAY_BUFFER, p.indicesCount * sizeof(GLuint),
+            p.indices, GL_STATIC_DRAW );
+        mIndicesCount = p.indicesCount;
     }
 
     // Generate VAO to represent object data on GPU
@@ -57,41 +54,73 @@ Object::setup(const GLfloat* vertices, GLuint verticesCount,
     glBindVertexArray(mVao);
     {
         glBindBuffer(GL_ARRAY_BUFFER, mVbo);
-        if(mHasEbo)
+        if(hasEbo())
         {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEbo);
         }
-        // Setup properties vertex data attribute
-        GLuint vertexAttribPos = 0;
-        GLuint colorAttribPos = -1;
-        GLuint strideSize = 3 * sizeof(GLfloat);
-        bool havePerVertexAttribColor = colorTypeSize > 0;
+        GLuint strideSize = 0;
+        // Setup position of attributes
+        GLuint attribPos[AttribOrder_Count] = {0, -1, -1};
+        bool haveAttribs[AttribOrder_Count] = {true, false, false};
+        // Setup attribute order
+        GLvoid* attribOffset[AttribOrder_Count] = {0, 0, 0};
+        bool eOn = (ext != nullptr);
+        int addToOffset = 0;
+        for(int i = 0; i < AttribOrder_Count; ++i)
+        {
+            int typeSize = GeometryParameters::defaultTypeSize; // Default
+            if(eOn)
+            {
+                if(ext->attribsOrder[i] != NoAttrib)
+                    break;
+                typeSize = ext->typeSize[i];
+                haveAttribs[i] = typeSize > 0;
+            }
+            addToOffset = GeometryParameters::attribsCount[i] * typeSize;
+            attribOffset[i] = reinterpret_cast<GLvoid*>(strideSize);
+            strideSize += addToOffset;
+        }
+
         if(mMaterial != NULL)
         {
-            vertexAttribPos = mMaterial->vertexAttribPos();
-            if(havePerVertexAttribColor)
+            attribPos[Vertex] = mMaterial->vertexAttribPos();
+
+            haveAttribs[TextCoordinates] = mMaterial->hasTextCoordAttribPos();
+            if(haveAttribs[TextCoordinates])
             {
-                strideSize += colorTypeSize;
+                attribPos[TextCoordinates] = mMaterial->textCoordAttribPos();
             }
-            if(mMaterial->hasColorAttribPos())
-            {
-                colorAttribPos = mMaterial->colorAttribPos();
+
+            haveAttribs[Color] = mMaterial->hasColorAttribPos();
+            if(haveAttribs[Color])
+            {   
+                attribPos[Color] = mMaterial->colorAttribPos();
             }
         }
-        glVertexAttribPointer(vertexAttribPos, 3, GL_FLOAT, GL_FALSE,
-            strideSize, static_cast<GLvoid*>(0));
-        glEnableVertexAttribArray(vertexAttribPos);
-        if(havePerVertexAttribColor && colorAttribPos != -1)
+        for(int i = 0; i < AttribOrder_Count; ++i)
         {
-            glVertexAttribPointer(colorAttribPos, 3, GL_FLOAT, GL_FALSE,
-                strideSize, reinterpret_cast<GLvoid*>(colorTypeSize));
-            glEnableVertexAttribArray(colorAttribPos);
+            if(haveAttribs[i] && attribPos[i] != -1)
+            {
+                glVertexAttribPointer(attribPos[i], GeometryParameters::attribsCount[i],
+                    eOn ? ext->attribsTypes[i] : GL_FLOAT, GL_FALSE, strideSize, attribOffset[i]);
+                glEnableVertexAttribArray(attribPos[i]);
+            }
         }
     }
     // End of binding VAO setup
     glBindVertexArray(0);
 
     return mMaterial != NULL ? mMaterial->configUniforms() : true;
+}
+
+void
+Object::teardown()
+{
+    glDeleteVertexArrays(1, &mVao);
+    glDeleteBuffers( 1, &mEbo );
+    glDeleteBuffers( 1, &mVbo );
+
+    mMaterial.reset();
 }
 
 void
@@ -104,7 +133,7 @@ Object::draw()
 
     glBindVertexArray(mVao);
     // Draw triangles
-    if(mHasEbo)
+    if(hasEbo())
     {
         glDrawElements(GL_TRIANGLES, mIndicesCount, GL_UNSIGNED_INT, 0);
     }

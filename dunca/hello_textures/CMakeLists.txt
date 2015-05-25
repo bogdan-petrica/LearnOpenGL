@@ -1,4 +1,5 @@
 include_directories( "." )
+include_directories( "../../External/soil/src" )
 
 file(GLOB framework_SRC "../framework/*.cpp")
 file(GLOB local_SRC "*.cpp")
