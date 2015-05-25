@@ -7,6 +7,26 @@
 
 namespace LGL {
 
+    typedef GLfloat Vec3f[3];
+    typedef GLfloat Vec2f[2];
+
+    template <typename T>
+    struct ElementInfo;
+
+    template <>
+    struct ElementInfo< Vec3f >
+    {
+        static const int type = GL_FLOAT;
+        static const int size = 3;
+    };
+
+    template <>
+    struct ElementInfo< Vec2f >
+    {
+        static const int type = GL_FLOAT;
+        static const int size = 2;
+    };
+
     struct VertexArrayObject
     {
         VertexArrayObject()
@@ -53,6 +73,8 @@ namespace LGL {
             assert(m_BufferObjectAddress == NULL || m_BufferObjectAddress == buffer);
             assert(m_Count == 0 || m_Count == count);
 
+            typedef ElementInfo< ELEMENT > ElemInfo;
+
             if (m_BufferObjectAddress == NULL)
             {
                 glBindBuffer(GL_ARRAY_BUFFER, m_Vbo);
@@ -61,14 +83,12 @@ namespace LGL {
 
             m_BufferObjectAddress = buffer;
             m_Count = count;
-
-            // !TODO
-            // map types and sizes from ELEMENT in a generic way
-
-            const GLuint elementSize = sizeof(ELEMENT) / sizeof(GLfloat);
+            
+            const GLuint elementSize = ElemInfo::size;
+            const GLenum elementType = ElemInfo::type;
             const GLuint strideSize = sizeof(VERTEX_ENTRY);
             const GLvoid * relativeOffset = static_cast<const GLvoid*>(&(static_cast<VERTEX_ENTRY*>(0)->*offset));
-            glVertexAttribPointer(location, elementSize, GL_FLOAT, GL_FALSE, strideSize, relativeOffset);
+            glVertexAttribPointer(location, elementSize, elementType, GL_FALSE, strideSize, relativeOffset);
             glEnableVertexAttribArray(location);
         }
 
