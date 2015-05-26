@@ -165,6 +165,7 @@ struct SceneData
             params.haveAttribs[Object::TextCoordinates] = true;
             ok = rectangle.setup(params);
         }
+
         return ok;
     }
 
