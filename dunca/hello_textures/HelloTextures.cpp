@@ -114,13 +114,15 @@ struct SceneData
     static bool
     setup(StateData& state )
     {
+        
+
         const static GLfloat KRadius = 0.9f;
         const GLfloat allVertices[] = {
-               -KRadius, -KRadius, 0.0f,    1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // bottom-left
-                KRadius, -KRadius, 0.0f,    0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom-right
-                KRadius,  KRadius, 0.0f,    0.0f, 1.0f, 1.0f,   1.0f, 1.0f, // top-right
-                0.0f,  KRadius, 0.0f,       0.0f, 0.0f, 1.0f,   0.5f, 1.0f, // top-center
-               -KRadius,  KRadius, 0.0f,    1.0f, 1.0f, 0.0f,   0.0f, 1.0f }; // top-left
+               -KRadius, -KRadius, 0.0f,    0.0f, 0.0f,    1.0f, 0.0f, 0.0f, // bottom-left
+                KRadius, -KRadius, 0.0f,    1.0f, 0.0f,    0.0f, 1.0f, 0.0f, // bottom-right
+                KRadius,  KRadius, 0.0f,    1.0f, 1.0f,    0.0f, 1.0f, 1.0f, // top-right
+                0.0f,  KRadius, 0.0f,       0.5f, 1.0f,    0.0f, 0.0f, 1.0f, // top-center
+               -KRadius,  KRadius, 0.0f,    0.0f, 1.0f,    1.0f, 1.0f, 0.0f }; // top-left
         
         std::shared_ptr<Texture> triangleTextures = std::make_shared<Texture>();
         bool ok = triangleTextures->loadFromFile(mCrateTexturePath);
@@ -147,6 +149,8 @@ struct SceneData
             params.verticesCount = sizeof(allVertices)/sizeof(allVertices[0]);
             params.indices = triangleIndices;
             params.indicesCount = sizeof(triangleIndices)/sizeof(triangleIndices[0]);
+            params.haveAttribs[Object::Color] = true;
+            params.haveAttribs[Object::TextCoordinates] = true;
             ok = ok && triangle.setup(params);
         }
         {
@@ -156,8 +160,11 @@ struct SceneData
             params.indices = rectangleIndices;
             params.indicesCount = sizeof(rectangleIndices)/sizeof(rectangleIndices[0]);
             params.obj = &triangle; // We reuse the same vertex buffer that triangle uses
+            params.haveAttribs[Object::Color] = true;
+            params.haveAttribs[Object::TextCoordinates] = true;
             ok = rectangle.setup(params);
         }
+
         return ok;
     }
 

@@ -55,12 +55,16 @@ public:
             , indicesCount(0)
             , obj(nullptr)
         {
+            haveAttribs[Vertex] = true;
+            haveAttribs[TextCoordinates] = false;
+            haveAttribs[Color] = false;
         }
 
         const GLfloat* vertices;
         GLuint verticesCount;
         const GLuint* indices;
         GLuint indicesCount;
+        bool haveAttribs[AttribOrder_Count];
         Object* obj;
         static const GLenum attribsCount[AttribOrder_Count];
         static const unsigned char defaultTypeSize;
