@@ -116,13 +116,18 @@ struct SceneData
     {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // Enable blending
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         const static GLfloat KRadius = 0.9f;
         const GLfloat allVertices[] = {
                -KRadius, -KRadius, 0.0f,    0.0f, 0.0f,    1.0f, 0.0f, 0.0f, // bottom-left
                 KRadius, -KRadius, 0.0f,    1.0f, 0.0f,    0.0f, 1.0f, 0.0f, // bottom-right
                 KRadius,  KRadius, 0.0f,    1.0f, 1.0f,    0.0f, 1.0f, 1.0f, // top-right
-                0.0f,  KRadius, 0.0f,       0.5f, 1.0f,    0.0f, 0.0f, 1.0f, // top-center
+                0.0f,  KRadius, 0.0f,       0.5f, 1.0f,    0.5f, 1.0f, 0.5f, // top-center
                -KRadius,  KRadius, 0.0f,    0.0f, 1.0f,    1.0f, 1.0f, 0.0f }; // top-left
         
         std::shared_ptr<Texture> triangleTextures = std::make_shared<Texture>();
@@ -165,6 +170,7 @@ struct SceneData
             params.haveAttribs[Object::TextCoordinates] = true;
             ok = rectangle.setup(params);
         }
+
         return ok;
     }
 
