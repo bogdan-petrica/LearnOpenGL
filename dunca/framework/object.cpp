@@ -9,7 +9,7 @@
 #include <iostream>
 
 
-const GLenum Object::GeometryParameters::attribsCount[AttribOrder_Count] = {3, 3, 2};
+const GLenum Object::GeometryParameters::attribsCount[AttribOrder_Count] = {3, 2, 3};
 const unsigned char Object::GeometryParameters::defaultTypeSize = sizeof(GLfloat);
 
 bool
@@ -61,7 +61,11 @@ Object::setup(const GeometryParameters& p, GeometryParamsExt* ext/*=nullptr*/)
         GLuint strideSize = 0;
         // Setup position of attributes
         GLuint attribPos[AttribOrder_Count] = {0, -1, -1};
-        bool haveAttribs[AttribOrder_Count] = {true, false, false};
+        bool haveAttribs[AttribOrder_Count];
+        for(int i = 0; i < AttribOrder_Count; ++i)
+        {
+            haveAttribs[i] = p.haveAttribs[i];
+        }
         // Setup attribute order
         GLvoid* attribOffset[AttribOrder_Count] = {0, 0, 0};
         bool eOn = (ext != nullptr);
@@ -69,15 +73,19 @@ Object::setup(const GeometryParameters& p, GeometryParamsExt* ext/*=nullptr*/)
         for(int i = 0; i < AttribOrder_Count; ++i)
         {
             int typeSize = GeometryParameters::defaultTypeSize; // Default
+            int attrib = i;
             if(eOn)
             {
                 if(ext->attribsOrder[i] != NoAttrib)
                     break;
-                typeSize = ext->typeSize[i];
-                haveAttribs[i] = typeSize > 0;
+                attrib = ext->attribsOrder[i];
+                typeSize = ext->typeSize[attrib];
+                haveAttribs[attrib] = typeSize > 0;
             }
-            addToOffset = GeometryParameters::attribsCount[i] * typeSize;
-            attribOffset[i] = reinterpret_cast<GLvoid*>(strideSize);
+            if(!haveAttribs[attrib])
+                continue;
+            addToOffset = GeometryParameters::attribsCount[attrib] * typeSize;
+            attribOffset[attrib] = reinterpret_cast<GLvoid*>(strideSize);
             strideSize += addToOffset;
         }
 
@@ -85,13 +93,15 @@ Object::setup(const GeometryParameters& p, GeometryParamsExt* ext/*=nullptr*/)
         {
             attribPos[Vertex] = mMaterial->vertexAttribPos();
 
-            haveAttribs[TextCoordinates] = mMaterial->hasTextCoordAttribPos();
+            haveAttribs[TextCoordinates] = haveAttribs[TextCoordinates]
+                & mMaterial->hasTextCoordAttribPos();
             if(haveAttribs[TextCoordinates])
             {
                 attribPos[TextCoordinates] = mMaterial->textCoordAttribPos();
             }
 
-            haveAttribs[Color] = mMaterial->hasColorAttribPos();
+            haveAttribs[Color] = haveAttribs[Color]
+                && mMaterial->hasColorAttribPos();
             if(haveAttribs[Color])
             {   
                 attribPos[Color] = mMaterial->colorAttribPos();
@@ -99,11 +109,12 @@ Object::setup(const GeometryParameters& p, GeometryParamsExt* ext/*=nullptr*/)
         }
         for(int i = 0; i < AttribOrder_Count; ++i)
         {
-            if(haveAttribs[i] && attribPos[i] != -1)
+            int attrib = eOn ? ext->attribsOrder[i] : i;
+            if(haveAttribs[attrib] && attribPos[attrib] != -1)
             {
-                glVertexAttribPointer(attribPos[i], GeometryParameters::attribsCount[i],
-                    eOn ? ext->attribsTypes[i] : GL_FLOAT, GL_FALSE, strideSize, attribOffset[i]);
-                glEnableVertexAttribArray(attribPos[i]);
+                glVertexAttribPointer(attribPos[attrib], GeometryParameters::attribsCount[attrib],
+                    eOn ? ext->attribsTypes[attrib] : GL_FLOAT, GL_FALSE, strideSize, attribOffset[attrib]);
+                glEnableVertexAttribArray(attribPos[attrib]);
             }
         }
     }
