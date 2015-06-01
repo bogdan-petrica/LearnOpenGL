@@ -13,6 +13,8 @@
 // Other includes
 #include "../Shaders/shader.h"
 
+float blendingCoef = 0.5;
+
 
 // Function prototypes
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -129,6 +131,8 @@ int main()
     SOIL_free_image_data(image);
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    
+
 
     // Game loop
     while (!glfwWindowShouldClose(window))
@@ -153,6 +157,10 @@ int main()
         // Activate shader
         ourShader.Use();       
         
+        // modify the uniform that controlls blending
+        GLint blendCoefLocation = glGetUniformLocation(ourShader.Program, "alfaCoef");
+        glUniform1f( blendCoefLocation, blendingCoef );
+
         // Draw container
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -175,4 +183,20 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+    else if ( GLFW_KEY_DOWN == key )
+    {
+        blendingCoef -= 0.1f;
+        if( blendingCoef < 0 )
+        {
+            blendingCoef = 0.0f;
+        }
+    }
+    else if ( GLFW_KEY_UP == key )
+    {
+        blendingCoef += 0.1f;
+        if( blendingCoef > 1.0 )
+        {
+            blendingCoef = 1.0;
+        }
+    }
 }
