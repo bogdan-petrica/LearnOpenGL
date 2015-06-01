@@ -102,6 +102,20 @@ public:
 		glUniform2f(location, f1, f2);
 	}
 
+	void setUniform1f(const std::string& name, float f)
+	{
+		GLint location = glGetUniformLocation(mShaderProgram, name.c_str());
+		use();
+		glUniform1f(location, f);
+	}
+
+	void setTextureSampler(int samplerIdx, GLuint textureId, const std::string& uniformName)
+	{
+		glActiveTexture(GL_TEXTURE0 + samplerIdx);
+		glBindTexture(GL_TEXTURE_2D, textureId);
+		glUniform1i(glGetUniformLocation(mShaderProgram, uniformName.c_str()), samplerIdx);
+	}
+
 private:
 
 	GLuint mShaderProgram;

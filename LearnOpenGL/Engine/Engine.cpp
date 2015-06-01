@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <iostream>
 #include "Shader.h"
-
-const double PI = std::atan(1.0) * 4;
+#include "Stuff.h"
+#include "SOIL.h"
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
@@ -46,16 +46,19 @@ int main()
 	glfwSetKeyCallback( window, &key_callback );
 
 	GLfloat vertices[] = {
-		0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // Top Right
-		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // Bottom Right
-		-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f,  // Bottom Left
-		-0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f   // Top Left 
+		0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // Top Right
+		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,// Bottom Right
+		-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // Bottom Left
+		-0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f   // Top Left 
 	};
 
 	GLuint indices[] = {  // Note that we start from 0!
 		0, 1, 3,   // First Triangle
 		1, 2, 3    // Second Triangle
 	};
+	
+	Texture texture1("data/container.jpg");
+	Texture texture2("data/awesomeface.png");
 
 	GLuint VAO;
 	glGenVertexArrays(1, &VAO);
@@ -72,10 +75,12 @@ int main()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, false, 6 * sizeof(GLfloat), 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, false, 8 * sizeof(GLfloat), 0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, false, 6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, false, 8 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
 	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(2, 3, GL_FLOAT, false, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(2);
 
 	glBindVertexArray(0);
 
@@ -92,18 +97,10 @@ int main()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		float timeValue = glfwGetTime();
-		bool odd = ((int)timeValue % 2) == 1;
-		timeValue = timeValue - std::floor(timeValue);
-		float y = sin(timeValue * 2 * PI) / 2.0f;
-		timeValue -= 0.5;
-		if (odd)
-		{ 
-			timeValue *= -1.0f;
-		}
-
-		sh.setUniform2f("offset", timeValue, y);
 		sh.use();
+		sh.setUniform1f("offset", glfwGetTime() * 0.2);
+		sh.setTextureSampler(0, texture1.getTextureId(), "ourTexture1");
+		sh.setTextureSampler(1, texture2.getTextureId(), "ourTexture2");
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
