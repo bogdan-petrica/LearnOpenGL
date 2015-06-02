@@ -9,13 +9,31 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <memory>
+#include <cassert>
 #include <stdio.h>
 #include <iostream>
 
+class KeyCallback
+{
+public:
+    virtual void statusChanged(GLFWwindow* window, int key, int scancode, int action, int mode) = 0;
+};
+
+std::vector<KeyCallback*> gKeyCallbacks;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
+    for (int i = 0; i < gKeyCallbacks.size(); ++i)
+    {
+        assert(gKeyCallbacks[i] != nullptr);
+        gKeyCallbacks[i]->statusChanged(window, key, scancode, action, mode);
+    }
+
     // When a user presses the escape key, we set the WindowShouldClose property to true, 
     // closing the application
     if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -23,10 +41,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 }
 
 const GLfloat bkColor[3] = { 0.2f, 0.3f, 0.3f };
-
-struct StateData
-{
-};
 
 class ColorMaterial: public Material
 {
@@ -55,12 +69,16 @@ private:
     static const char* greenFragmentShaderSz;
 };
 
-const char* ColorMaterial::vertexShaderSz ="../../../dunca/hello_shaders/green.vs";
-const char* ColorMaterial::greenFragmentShaderSz = "../../../dunca/hello_shaders/green.frag";
+const char* ColorMaterial::vertexShaderSz ="../../../dunca/hello_transformations/green.vs";
+const char* ColorMaterial::greenFragmentShaderSz = "../../../dunca/hello_transformations/green.frag";
 
 class TextureMaterial: public Material
 {
 public:
+    TextureMaterial(const glm::mat4* transform)
+        : mTransformation(transform)
+    {
+    }
 
     bool vertexShader(std::string& code) const
     {
@@ -75,6 +93,7 @@ public:
     configUniforms()
     {
         mUniformLocation = glGetUniformLocation(mProgram.GetProgram(), "globalArg");
+        mTransformUniform = glGetUniformLocation(mProgram.GetProgram(), "objectTransform");
         mCrateTextLoc = glGetUniformLocation(mProgram.GetProgram(), "crateTextureUnit");
         mSmileTextLoc = glGetUniformLocation(mProgram.GetProgram(), "smileTextureUnit");
         return mUniformLocation != -1;
@@ -84,6 +103,8 @@ public:
     updateUniforms()
     {
         glUniform1f(mUniformLocation, static_cast<GLfloat>( abs(sin(glfwGetTime())) ));
+        assert(mTransformation != nullptr);
+        glUniformMatrix4fv(mTransformUniform, 1, GL_FALSE, glm::value_ptr(*mTransformation));
         glUniform1i(mCrateTextLoc, 0);
         glUniform1i(mSmileTextLoc, 1);
         return true; // Do nothing, just a way for subclass to update uniforms
@@ -94,7 +115,9 @@ public:
     GLuint textCoordAttribPos() const { return 2; }; // Bind texture data to the third attribute "layout (location = 2)"
 
 private:
+    const glm::mat4* mTransformation;
     GLuint mUniformLocation;
+    GLuint mTransformUniform;
     GLuint mCrateTextLoc;
     GLuint mSmileTextLoc;
 
@@ -103,37 +126,110 @@ private:
     static const char* textureFragmentShaderSz;
 };
 
-const char* TextureMaterial::scaleTextureVertexShaderSz ="../../../dunca/hello_textures/texture.vs";
-const char* TextureMaterial::textureFragmentShaderSz = "../../../dunca/hello_textures/texture.frag";
+const char* TextureMaterial::scaleTextureVertexShaderSz ="../../../dunca/hello_transformations/texture.vs";
+const char* TextureMaterial::textureFragmentShaderSz = "../../../dunca/hello_transformations/texture.frag";
 
-struct SceneData
+class SceneData: public KeyCallback
 {
-    static Object triangle;
-    static Object rectangle;
+public:
+    void statusChanged(GLFWwindow* window, int key, int scancode, int action, int mode)
+    {
+        if(action == GLFW_PRESS || action == GLFW_REPEAT)
+        {
+            bool done = true;
+            if(key == GLFW_KEY_UP || key == GLFW_KEY_DOWN)
+                mTranslateX += key == GLFW_KEY_UP ? 0.1f : -0.1f;
+            else if(key == GLFW_KEY_LEFT || key == GLFW_KEY_RIGHT)
+                mTranslateY += key == GLFW_KEY_LEFT ? -0.1f: 0.1f;
+            else if(key == GLFW_KEY_G || key == GLFW_KEY_S)
+                mScale += key == GLFW_KEY_G ? 0.1f : -0.1f;
+            else if(key == GLFW_KEY_R || key == GLFW_KEY_L)
+                mRotate += (glm::pi<float>()/10.0f) * (key == GLFW_KEY_L ? 1.0f : -1.0f);
+            else if(key == GLFW_KEY_Q)
+            {
+                if(mModifyUniformTransform)
+                    mUniformTransform = glm::mat4();
+                else
+                    mGlobalTransform = glm::mat4();
+            }
+            else if(key == GLFW_KEY_F)
+            {
+                mNearestFiltering = !mNearestFiltering;
+            }
+            else if(key == GLFW_KEY_U)
+            {
+                mModifyUniformTransform = !mModifyUniformTransform;
+            }
+            else
+                done = false;
+            if(done)
+            {
+                if(mModifyUniformTransform)
+                {
+                    mUniformTransform = updateTransform(mUniformTransform);
+                }
+                else
+                {
+                    mGlobalTransform = updateTransform(mGlobalTransform);
+                    tearDown();
+                    setup();
+                }
+            }
+        }
+    }
 
-    static bool
-    setup(StateData& state )
+    SceneData()
+        : mTranslateX(0)
+        , mTranslateY(0)
+        , mScale(1.0f)
+        , mRotate(0.0f)
+        , mNearestFiltering(true)
+        , mModifyUniformTransform(true)
+    {
+    }
+
+    bool
+    setup()
     {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            mNearestFiltering ? GL_NEAREST : GL_LINEAR);
         // Enable blending
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        const static GLfloat KRadius = 0.9f;
-        const GLfloat allVertices[] = {
-               -KRadius, -KRadius, 0.0f,    0.0f, 0.0f,    1.0f, 0.0f, 0.0f, // bottom-left
-                KRadius, -KRadius, 0.0f,    1.0f, 0.0f,    0.0f, 1.0f, 0.0f, // bottom-right
-                KRadius,  KRadius, 0.0f,    1.0f, 1.0f,    0.0f, 1.0f, 1.0f, // top-right
-                0.0f,  KRadius, 0.0f,       0.5f, 1.0f,    0.5f, 1.0f, 0.5f, // top-center
-               -KRadius,  KRadius, 0.0f,    0.0f, 1.0f,    1.0f, 1.0f, 0.0f }; // top-left
+        const static float KRadius = 0.9f;
+        struct GeometryData 
+        {
+            glm::vec3 vertex;
+            glm::vec2 textCoords;
+            glm::vec3 colorCoords;
+        };
+        GeometryData allVertices[] = {
+            {glm::vec3(-KRadius, -KRadius, 0.0f), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f)},  // bottom-left
+            {glm::vec3(KRadius, -KRadius, 0.0f), glm::vec2(1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)},   // bottom-right
+            {glm::vec3(KRadius,  KRadius, 0.0f), glm::vec2(1.0f, 1.0f), glm::vec3(0.0f, 1.0f, 1.0f)},   // top-right
+            {glm::vec3(0.0f,  KRadius, 0.0f), glm::vec2(0.5f, 1.0f), glm::vec3(0.5f, 1.0f, 0.5f)},      // top-center
+            {glm::vec3(-KRadius,  KRadius, 0.0f), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f)}   // top-left
+        };
         
+        // Visually testing matrix transformation for one point
+        glm::mat4 transTrianglePoint;
+        transTrianglePoint = glm::translate(transTrianglePoint, glm::vec3(mTranslateY, mTranslateX, 0.0f));
+        allVertices[3].vertex = glm::vec3(transTrianglePoint * glm::vec4(allVertices[3].vertex, 1.0f));
+
+        for (int i = 0; i < sizeof(allVertices)/sizeof(allVertices[0]); ++i)
+        {
+            allVertices[i].vertex = glm::vec3(mGlobalTransform * glm::vec4(allVertices[i].vertex, 1.0f));
+        }
+
         std::shared_ptr<Texture> triangleTextures = std::make_shared<Texture>();
         bool ok = triangleTextures->loadFromFile(mCrateTexturePath);
         ok = ok && triangleTextures->loadFromFile(mSmileTexturePath, true);
-        std::shared_ptr<TextureMaterial> textureMaterial = std::make_shared<TextureMaterial>();
+        std::shared_ptr<TextureMaterial> textureMaterial = std::make_shared<TextureMaterial>(
+            &mUniformTransform);
         // Set program before setup where uniforms location is retrieved
         ok = ok && textureMaterial->setup(triangleTextures);
         if(ok)
@@ -151,8 +247,8 @@ struct SceneData
             const GLuint triangleIndices[] = { 0/*bottom-left*/, 1/*bottom-right*/,
                 3/*top-center*/ };
             Object::GeometryParameters params;
-            params.vertices = allVertices;
-            params.verticesCount = sizeof(allVertices)/sizeof(allVertices[0]);
+            params.vertices = reinterpret_cast<GLfloat*>(allVertices);
+            params.verticesCount = sizeof(allVertices)/sizeof(allVertices[0].vertex.x);
             params.indices = triangleIndices;
             params.indicesCount = sizeof(triangleIndices)/sizeof(triangleIndices[0]);
             params.haveAttribs[Object::Color] = true;
@@ -174,13 +270,15 @@ struct SceneData
         return ok;
     }
 
-    static void
-    tearDown(StateData& state)
+    void
+    tearDown()
     {
+        rectangle.teardown();
+        triangle.teardown();
     }
 
-    static void
-    drawFrame(StateData& state)
+    void
+    drawFrame()
     {
         // Draw background to cover the previous frame
         glClearColor( bkColor[0], bkColor[1], bkColor[2], 1.0f );
@@ -192,16 +290,35 @@ struct SceneData
         triangle.draw();
     }
 
+    glm::mat4
+    updateTransform(const glm::mat4& trans)
+    {
+        glm::mat4 result(glm::rotate(trans, mRotate, glm::vec3(0.0f, 0.0f, 1.0f)));
+        result = glm::scale(result, glm::vec3(mScale, mScale, mScale));
+        mRotate = 0;
+        mScale = 1;
+        return result;
+    }
+
 private:
+    Object triangle;
+    Object rectangle;
+    float mTranslateX;
+    float mTranslateY;
+    float mScale;
+    float mRotate;
+    bool mNearestFiltering;
+    bool mModifyUniformTransform;
+    glm::mat4 mGlobalTransform;
+    glm::mat4 mUniformTransform;
+
+
     static const char* mCrateTexturePath;
     static const char* mSmileTexturePath;
 };
 
 const char* SceneData::mCrateTexturePath = "../../../dunca/res/container.jpg";
 const char* SceneData::mSmileTexturePath = "../../../dunca/res/awesome_face.png";
-
-Object SceneData::triangle;
-Object SceneData::rectangle;
 
 int main()
 {
@@ -234,21 +351,23 @@ int main()
     glfwSetKeyCallback( window, &key_callback );
 
     // Setup scene
-    StateData state;
-    bool ok = SceneData::setup(state);
+    SceneData scene;
+    bool ok = scene.setup();
+
+    gKeyCallbacks.push_back(&scene);
 
     while(ok && !glfwWindowShouldClose(window))
     {
         glfwPollEvents();
 
         // Draw scene
-        SceneData::drawFrame(state);
+        scene.drawFrame();
 
         glfwSwapBuffers(window);
     }
 
     // Cleanup scene
-    SceneData::tearDown(state);
+    scene.tearDown();
 
     glfwTerminate();
 

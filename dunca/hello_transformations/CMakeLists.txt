@@ -1,5 +1,5 @@
 include_directories( "." )
-include_directories( "../../External/glm/glm" )
+include_directories( "../../External/glm" )
 include_directories( "../framework/src" )
 
 file(GLOB local_SRC "*.cpp")

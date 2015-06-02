@@ -8,6 +8,7 @@ out vec3 interpolatedColor;
 out vec2 interpolatedTextCoords;
 
 uniform float globalArg;
+uniform mat4 objectTransform;
 
 float
 map(float v, float fB, float fE, float sB, float sE)
@@ -18,7 +19,7 @@ map(float v, float fB, float fE, float sB, float sE)
 void main()
 {
   vec3 pos = map(globalArg, 0.0f, 1.0f, 0.9f, 1.0f) * vec3(position.x, position.y, position.z);
-  gl_Position = vec4(pos, 1.0f);
+  gl_Position = objectTransform * vec4(pos, 1.0f);
   interpolatedColor = color;
   interpolatedTextCoords = textCoords;
 }
