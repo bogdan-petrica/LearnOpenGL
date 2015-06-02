@@ -15,12 +15,26 @@
 
 #include "SOIL.h"
 
+GLfloat alpha = 0.5f;
+
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
     // When a user presses the escape key, we set the WindowShouldClose property to true, 
     // closing the application
-    if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-    	glfwSetWindowShouldClose(window, GL_TRUE);
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GL_TRUE);
+    else  if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
+        alpha += 0.05f;
+        if (alpha > 1.0f)
+            alpha = 1.0f;
+    }
+    else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+    {
+        alpha -= 0.05f;
+        if (alpha < 0.0f)
+            alpha = 0.0f;
+    }
+        
 }
 
 
@@ -32,6 +46,10 @@ struct VertexEntry
 };
 
 namespace LGL {
+    enum TextureAxis {
+        TextureAxisS,
+        TextureAxisZ
+    };
 
     struct Texture
     {
@@ -63,12 +81,41 @@ namespace LGL {
             SOIL_free_image_data(image);
         }
 
-        void Use()
+        void SetRepeat(TextureAxis axis, bool mirror = false)
         {
-            assert(m_Texture != NULL);
+            assert(m_Texture != 0);
+            glBindTexture(GL_TEXTURE_2D, m_Texture);
+            glTexParameteri(GL_TEXTURE_2D, axis == TextureAxisS ? GL_TEXTURE_WRAP_S : GL_TEXTURE_WRAP_T, mirror ? GL_MIRRORED_REPEAT : GL_REPEAT);
             glBindTexture(GL_TEXTURE_2D, m_Texture);
         }
 
+        void SetClamp(TextureAxis axis)
+        {
+            assert(m_Texture != 0);
+            glBindTexture(GL_TEXTURE_2D, m_Texture);
+            glTexParameteri(GL_TEXTURE_2D, axis == TextureAxisS ? GL_TEXTURE_WRAP_S : GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glBindTexture(GL_TEXTURE_2D, m_Texture);
+        }
+
+
+        void SetMagnifyingFilter(bool linear)
+        {
+            assert(m_Texture != 0);
+            glBindTexture(GL_TEXTURE_2D, m_Texture);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
+            glBindTexture(GL_TEXTURE_2D, m_Texture);
+        }
+
+
+        void Use( unsigned int unitIdx )
+        {
+            assert(m_Texture != 0);
+            assert(unitIdx < 16);
+            glActiveTexture(GL_TEXTURE0 + unitIdx);
+            glBindTexture(GL_TEXTURE_2D, m_Texture);
+        }
+
+    
     private:
         GLuint m_Texture;
     };
@@ -110,8 +157,17 @@ int main()
         program.LoadVertexShader("LearnOpenGL/Textures/Textures.vs");
         program.LoadFragmentShader("LearnOpenGL/Textures/Textures.frag");
 
-        LGL::Texture texture;
-        texture.Load("LearnOpenGL/Textures/container.jpg");
+        LGL::Texture texture1;
+        texture1.Load("LearnOpenGL/Textures/container.jpg");
+        texture1.SetClamp(LGL::TextureAxisS);
+        texture1.SetClamp(LGL::TextureAxisZ);
+        texture1.SetMagnifyingFilter(false);
+
+        LGL::Texture texture2;
+        texture2.Load("LearnOpenGL/Textures/awesomeface.png");
+        texture2.SetRepeat(LGL::TextureAxisS);
+        texture2.SetRepeat(LGL::TextureAxisZ);
+        texture2.SetMagnifyingFilter(false);
 
         VertexEntry vertices[4] = {
             {
@@ -124,20 +180,20 @@ int main()
                 // bottom right
                 { 0.5f, -0.5f, 0.0f },      
                 { 0.0f, 1.0f, 0.0f },
-                { 1.0f, 0.0f }
+                { 2.0f, 0.0f }
             },
             {
                 // top right
                 { 0.5f, 0.5f, 0.0f },      
                 { 1.0f, 1.0f, 0.0f },
-                { 1.0f, 1.0f }
+                { 2.0f , 2.0f }
             },
 
             {
                 // top left
                 { -0.5f, 0.5f, 0.0f },
                 { 0.0f, 0.0f, 1.0f },
-                { 0.0f, 1.0f }
+                { 0.0f, 2.0f }
             }
         };
         
@@ -145,6 +201,7 @@ int main()
             { 0, 1, 3 },
             { 2, 3, 1 }
         };
+
 
         LGL::VertexArrayObject vao;
         vao.Begin();
@@ -155,22 +212,28 @@ int main()
         vao.Done();
 
         LGL::Uniform u(program, "positionOffset");
+        LGL::Uniform(program, "ourTexture1").Set(0);
+        LGL::Uniform(program, "ourTexture2").Set(1);
+        LGL::Uniform mixValue(program, "mixValue");
                 
         while (!glfwWindowShouldClose(window))
         {
             glfwPollEvents();
 
+            // read from global variable and set the uniform for mixing the two textures
+            mixValue.Set(alpha);
+
             glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
 
-            texture.Use();
+            texture1.Use(0);
+            texture2.Use(1);
 
             program.Use();
 
             GLfloat timeValue = static_cast<GLfloat>( glfwGetTime() );
             GLfloat positionOffsetValue = (sin(timeValue) / 2);
-
-            u.Set( positionOffsetValue );
+            //u.Set( positionOffsetValue );
 
             vao.Draw();
             

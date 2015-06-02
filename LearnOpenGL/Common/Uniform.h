@@ -25,6 +25,11 @@ namespace LGL {
             glUniform1f(m_Location, x);
         }
 
+        void Set(GLint x)
+        {
+            glUniform1i(m_Location, x);
+        }
+
     private:
         GLuint m_Location;
     };
