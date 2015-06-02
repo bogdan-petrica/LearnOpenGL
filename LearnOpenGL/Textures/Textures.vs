@@ -12,5 +12,11 @@ void main()
 {
 	gl_Position = vec4( position.x + positionOffset, position.y, position.z, 1.0f );
 	vertexColor = vec4( inVertexColor, 1.0f );
-	textCoord = vec2( inTextCoord.x, 1.0f - inTextCoord.y );
+
+    float a = 0.75f;
+    float r = 2.0f - 2*a;
+
+    float xCoord = a + inTextCoord.x * r;
+    float yCoord = a + ( 1.0f - inTextCoord.y ) * r;
+	textCoord = vec2( xCoord, yCoord );
 }
