@@ -1,0 +1,7 @@
+
+<<<<<<< HEAD
+add_executable( Shaders "shader.h" "shaders-main.cpp" )
+=======
+add_executable( Shaders "Shaders.cpp" "GLProgram.h" "GLProgram.cpp" )
+>>>>>>> origin/bogdanp/experiment
+target_link_libraries( Shaders glfw GLEW_static opengl32 )

@@ -3,6 +3,7 @@
 #include "GLProgram.h"
 
 #include <fstream>
+#include <iostream>
 
 namespace LGL {
 
@@ -33,6 +34,7 @@ namespace LGL {
         if (!success) {
             GLchar msg[512];
             glGetShaderInfoLog(shaderId, 512, NULL, msg);
+            std::cout << msg;
             throw GLException(msg);
         }
 
