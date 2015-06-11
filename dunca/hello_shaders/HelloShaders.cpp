@@ -55,7 +55,7 @@ public:
         return true; // Do nothing, just a way for subclass to update uniforms
     }
 
-    bool setup(GLuint vertexAttribPos, GLuint vertexAttribColor,
+    void setup(GLuint vertexAttribPos, GLuint vertexAttribColor,
         const GLfloat* vertices, GLuint verticesCount,
         const GLuint* indices = NULL, GLuint indicesCount = 0,
         Object* obj = NULL )

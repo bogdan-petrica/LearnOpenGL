@@ -1,5 +1,5 @@
-#ifndef SHADER_H
-#define SHADER_H
+#ifndef SD_FW_SHADER_H
+#define SD_FW_SHADER_H
 
 #include <string>
 #include <GL/glew.h>
@@ -13,9 +13,9 @@ public:
     Shader(const GLchar* vertexPath, const GLchar* fragmentPath,
         const GLchar* geometryPath = nullptr);
 
-    bool
+    void
     load(const GLchar* vShaderCode, const GLchar * fShaderCode,
-        const GLchar * gShaderCode = nullptr);
+        const GLchar * gShaderCode = nullptr)  throw();
 
     // Uses the current shader
     void
