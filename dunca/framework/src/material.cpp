@@ -7,25 +7,20 @@
 #include <iostream>
 
 
-/*virtual*/ bool
-Material::setup(std::shared_ptr<Texture> texture/*=std::shared_ptr<Texture>()*/)
+/*virtual*/ void
+Material::setup(std::shared_ptr<Texture> texture/*=std::shared_ptr<Texture>()*/) throw()
 {
     std::string vs;
     std::string fs;
-    bool ok = vertexShader(vs);
-    ok = ok && fragmentShader(fs);
-    if(ok && !vs.empty() && !fs.empty())
+    vertexShader(vs);
+    fragmentShader(fs);
+    if(!vs.empty() && !fs.empty())
     {
-        ok = mProgram.load(vs.c_str(), fs.c_str());
+        mProgram.load(vs.c_str(), fs.c_str());
     }
 
-    if(ok)
-    {
-        ok = configUniforms();
-        mTexture = texture;
-    }
-
-    return ok;
+    configUniforms();
+    mTexture = texture;
 }
 
 /*virtual*/ void

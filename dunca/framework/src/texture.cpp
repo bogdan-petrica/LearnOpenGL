@@ -19,19 +19,17 @@ Texture::~Texture()
     }
 };
 
-bool
-Texture::loadFromFile(const char* path, bool haveAlpha/*=false*/)
+void
+Texture::loadFromFile(const char* path, bool haveAlpha/*=false*/) throw()
 {
     int w, h;
     unsigned char* image = SOIL_load_image(path, &w, &h, 0,
         haveAlpha ? SOIL_LOAD_RGBA : SOIL_LOAD_RGB);
-    if(image != nullptr)
-    {
-        upload(image, w, h, haveAlpha);
-        SOIL_free_image_data(image);
-        return true;
-    }
-    return false;
+    if(image == nullptr)
+        throw std::runtime_error("SOIL_load_image FAILED");
+
+    upload(image, w, h, haveAlpha);
+    SOIL_free_image_data(image);
 }
 
 void
