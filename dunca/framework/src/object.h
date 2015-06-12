@@ -11,6 +11,9 @@ public:
     virtual void
     computeModelMatrix(glm::mat4& m);
 
+    virtual void
+    prepare() {};
+
     glm::vec3 rotate;
     glm::vec3 translate;
     glm::vec3 scale;

@@ -16,21 +16,60 @@ void
 Geometry::setup(const GeometryParameters& p,
     GeometryParamsExt* ext/*=nullptr*/) throw()
 {
-    if(p.vertices != nullptr)
+    GLuint strideSize = 0;
+    // Setup position of attributes
+    GLuint attribPos[AttribOrder_Count] = {0, -1, -1};
+    bool haveAttribs[AttribOrder_Count];
+    for(int i = 0; i < AttribOrder_Count; ++i)
+    {
+        haveAttribs[i] = p.haveAttribs[i];
+    }
+    // Setup attribute order
+    GLvoid* attribOffset[AttribOrder_Count] = {0, 0, 0};
+    bool eOn = (ext != nullptr);
+    int addToOffset = 0;
+    for(int i = 0; i < AttribOrder_Count; ++i)
+    {
+        int typeSize = GeometryParameters::defaultTypeSize; // Default
+        int attrib = i;
+        if(eOn)
+        {
+            if(ext->attribsOrder[i] != NoAttrib)
+                break;
+            attrib = ext->attribsOrder[i];
+            typeSize = ext->typeSize[attrib];
+            haveAttribs[attrib] = typeSize > 0;
+        }
+        if(!haveAttribs[attrib])
+            continue;
+        addToOffset = GeometryParameters::attribsCount[attrib] * typeSize;
+        attribOffset[attrib] = reinterpret_cast<GLvoid*>(strideSize);
+        strideSize += addToOffset;
+    }
+
+    // Setup vertex buffers including all available attributes
+    if( p.obj != NULL )
+    {
+        mVbo = p.obj->mVbo;
+        if( !p.obj->hasEbo() )
+        {
+            mCoordinatesCount = p.obj->mCoordinatesCount;
+        }
+        else
+        {
+            mCoordinatesCount = p.verticesCount * strideSize;
+        }
+    }
+    else if(p.vertices != nullptr)
     {
         // Setup vertex buffer to keep the vertices
         glGenBuffers( 1, &mVbo );
         // Bind the newly created buffer to the array buffer target
         glBindBuffer( GL_ARRAY_BUFFER, mVbo );
+        mCoordinatesCount = p.verticesCount * strideSize;
         // Upload buffer to GPU in its provided location
-        glBufferData( GL_ARRAY_BUFFER, p.verticesCount * sizeof(GLfloat),
+        glBufferData( GL_ARRAY_BUFFER, mCoordinatesCount * sizeof(GLfloat),
             p.vertices, GL_STATIC_DRAW );
-        mVerticesCount = p.verticesCount;
-    }
-    else if( p.obj != NULL )
-    {
-        mVbo = p.obj->mVbo;
-        mVerticesCount = p.obj->mVerticesCount;
     }
     else
     {
@@ -58,36 +97,6 @@ Geometry::setup(const GeometryParameters& p,
         if(hasEbo())
         {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEbo);
-        }
-        GLuint strideSize = 0;
-        // Setup position of attributes
-        GLuint attribPos[AttribOrder_Count] = {0, -1, -1};
-        bool haveAttribs[AttribOrder_Count];
-        for(int i = 0; i < AttribOrder_Count; ++i)
-        {
-            haveAttribs[i] = p.haveAttribs[i];
-        }
-        // Setup attribute order
-        GLvoid* attribOffset[AttribOrder_Count] = {0, 0, 0};
-        bool eOn = (ext != nullptr);
-        int addToOffset = 0;
-        for(int i = 0; i < AttribOrder_Count; ++i)
-        {
-            int typeSize = GeometryParameters::defaultTypeSize; // Default
-            int attrib = i;
-            if(eOn)
-            {
-                if(ext->attribsOrder[i] != NoAttrib)
-                    break;
-                attrib = ext->attribsOrder[i];
-                typeSize = ext->typeSize[attrib];
-                haveAttribs[attrib] = typeSize > 0;
-            }
-            if(!haveAttribs[attrib])
-                continue;
-            addToOffset = GeometryParameters::attribsCount[attrib] * typeSize;
-            attribOffset[attrib] = reinterpret_cast<GLvoid*>(strideSize);
-            strideSize += addToOffset;
         }
 
         if(mMaterial != NULL)
@@ -142,7 +151,7 @@ Geometry::draw()
     }
     else
     {
-        glDrawArrays(GL_TRIANGLES, 0, mVerticesCount);
+        glDrawArrays(GL_TRIANGLES, 0, mCoordinatesCount);
     }
     // Unbind this VAO
     glBindVertexArray(0);

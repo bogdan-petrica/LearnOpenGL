@@ -14,8 +14,6 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-const GLfloat bkColor[3] = { 0.2f, 0.3f, 0.3f };
-
 //******************************************************************************
 Renderer::Renderer()
 {
@@ -29,35 +27,61 @@ Renderer::init(std::shared_ptr<Window> window, std::shared_ptr<Scene> scene,
     mWindow = window;
     mScene = scene;
     mCamera = camera;
+    assert(mWindow != nullptr);
+    assert(mScene != nullptr);
+    assert(mCamera != nullptr);
 }
 
 //******************************************************************************
 void
 Renderer::runLoop() throw()
 {
+    for(int i = 0; i < mRenderEventsListener.size(); ++i)
+    {
+        mRenderEventsListener[i]->setupScene();
+    }
+
+    mScene->prepare();
+
     while(!mWindow->shouldClose())
     {
         mWindow->processEvents();
 
-        // Draw background to cover the previous frame
-        glClearColor( bkColor[0], bkColor[1], bkColor[2], 1.0f );
-        glClear(GL_COLOR_BUFFER_BIT);
+        for(int i = 0; i < mRenderEventsListener.size(); ++i)
+        {
+            mRenderEventsListener[i]->beginFrame();
+        }
 
         draw();
 
         mWindow->swapBuffers();
+
+        for(int i = 0; i < mRenderEventsListener.size(); ++i)
+        {
+            mRenderEventsListener[i]->endFrame();
+        }
     }
 }
 
+//******************************************************************************
+void
+Renderer::addRenderEventListerner(IRenderEvents* listener)
+{
+    mRenderEventsListener.push_back(listener);
+}
+
+//******************************************************************************
 void
 Renderer::draw()
 {
+    mScene->prepareFrame();
+
     glm::mat4 viewMat;
-    if(mCamera != nullptr)
     {
         const glm::vec4& v = mCamera->viewport();
         glViewport(v[0], v[1], v[2], v[3]);
 
+        // TODO: Take position from camera
         viewMat = mCamera->projection();
         viewMat = glm::translate(viewMat, glm::vec3(0.0f, 0.0f, -3.0f));
     }
@@ -69,14 +93,24 @@ Renderer::draw()
         if(item.getGeometry() != nullptr)
         {
             Geometry& geometry = *(item.getGeometry());
+
+            mScene->beginItemDraw(item);
+
+            // First prepare the geometry ...
+            geometry.prepare();
+
             std::shared_ptr<Material> material = geometry.getMaterial();
             if(material != nullptr)
             {
+                // ... then the material ...
+                material->prepare();
                 material->bind();
             }
             std::shared_ptr<Object> obj = item.getObject();
             if(obj != nullptr)
             {
+                // ... and later the object.
+                obj->prepare();
                 if(material != nullptr)
                 {
                     glm::mat4 tmpMat;
@@ -93,6 +127,11 @@ Renderer::draw()
                 }
             }
             geometry.draw();
+
+            //  prepare the geometry ...
+            geometry.close();
+
+            mScene->endItemDraw(item);
         }
     }
 }

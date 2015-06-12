@@ -38,6 +38,7 @@ public:
     };
 
 public:
+    ~Window();
 
     static std::shared_ptr<Window> init(int w, int h);
     static void term();

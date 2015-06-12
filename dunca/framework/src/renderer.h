@@ -2,6 +2,7 @@
 #define SD_FW_RENDERER_H
 
 #include <memory>
+#include <vector>
 
 #include <glm/glm.hpp>
 
@@ -13,6 +14,15 @@ class Camera;
 class Renderer
 {
 public:
+    class IRenderEvents
+    {
+    public:
+        virtual void beginFrame() {};
+        virtual void endFrame() {};
+        virtual void setupScene() {};
+    };
+
+public:
     Renderer();
 
     void
@@ -22,6 +32,9 @@ public:
     void
     runLoop() throw();
 
+    void
+    addRenderEventListerner(IRenderEvents* listener);
+
 private:
     void
     draw();
@@ -29,6 +42,8 @@ private:
     std::shared_ptr<Window> mWindow;
     std::shared_ptr<Scene> mScene;
     std::shared_ptr<Camera> mCamera;
+
+    std::vector<IRenderEvents*> mRenderEventsListener;
 };
 
 #endif

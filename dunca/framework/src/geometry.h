@@ -18,18 +18,20 @@ class Geometry
     GLuint mVao;
 
     union {
-        GLuint mVerticesCount;
+        GLuint mCoordinatesCount;
         GLuint mIndicesCount;
     };
 
     std::shared_ptr<Material> mMaterial;
+
+    bool mBackfaceCulled;
 
 public:
 
     Geometry(std::shared_ptr<Material> material)
         : mVbo(-1)
         , mEbo(-1)
-        , mVerticesCount(0)
+        , mCoordinatesCount(0) // mIndicesCount(0)
         , mMaterial(material)
     {
     }
@@ -37,7 +39,8 @@ public:
     Geometry()
         : mVbo(-1)
         , mEbo(-1)
-        , mVerticesCount(0)
+        , mCoordinatesCount(0) // mIndicesCount(0)
+        , mBackfaceCulled(true)
     {
     }
 
@@ -104,7 +107,18 @@ public:
 
     void draw();
 
+    virtual void
+    prepare() {};
+
+    virtual void
+    close() {};
+
     bool hasEbo() { return mEbo != -1; }
+
+    bool
+    isBackfaceCooled() { return mBackfaceCulled; };
+    void
+    setBackfaceCooled(bool enable) { mBackfaceCulled = enable; };
 
     std::shared_ptr<Material> getMaterial();
 };

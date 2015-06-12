@@ -20,17 +20,23 @@ public:
     void
     init();
 
-    void
-    add(Item& item) throw();
+    virtual void
+    prepare();
+    virtual void
+    prepareFrame();
+    virtual void
+    beginItemDraw(Item& item);
+    virtual void
+    endItemDraw(Item& item);
 
     void
-    draw();
+    add(Item& item) throw();
 
     std::vector<Item>& items();
 
 private:
-    glm::mat4 mWorldTransform;
     std::vector<Item> mItems;
+    const glm::vec3 mBkColor;
 };
 
 //******************************************************************************

@@ -13,6 +13,11 @@ Window::Window()
 {
 }
 
+Window::~Window()
+{
+    termGlfw();
+}
+
 //******************************************************************************
 std::shared_ptr<Window>
 Window::init(int w, int h)
@@ -29,7 +34,10 @@ Window::init(int w, int h)
 void
 Window::term()
 {
-    termGlfw();
+    if(mWindow != nullptr)
+    {
+        glfwSetWindowShouldClose(mWindow, GL_TRUE);
+    }
 }
 
 //******************************************************************************
@@ -82,10 +90,6 @@ Window::initGlfw(int w, int h)
 void
 Window::termGlfw()
 {
-    if(mWindow != nullptr)
-    {
-        glfwSetWindowShouldClose(mWindow, GL_TRUE);
-    }
     glfwTerminate();
 }
 

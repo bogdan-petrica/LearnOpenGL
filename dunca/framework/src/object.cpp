@@ -29,8 +29,9 @@ Object::Object()
 /*virtual*/ void
 Object::computeModelMatrix(glm::mat4& m)
 {
-    if(scale != gScaleVector)
-        m = glm::scale(m, scale);
+    // We do it in the inverse order to respect matrices composition
+    if(translate != gTranslateVector)
+        m = glm::translate(m, translate);
 
     for (int i = 0; i < rotate.length(); ++i)
     {
@@ -42,6 +43,6 @@ Object::computeModelMatrix(glm::mat4& m)
         }
     }
 
-    if(translate != gTranslateVector)
-        m = glm::translate(m, translate);
+    if(scale != gScaleVector)
+        m = glm::scale(m, scale);
 }

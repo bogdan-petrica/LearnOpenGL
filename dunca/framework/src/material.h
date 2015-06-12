@@ -25,6 +25,7 @@ public:
 
     virtual void setup(std::shared_ptr<Texture> texture = std::shared_ptr<Texture>()) throw();
     void bind();
+    virtual void prepare() {};
 
     virtual bool vertexShader(std::string& code) const throw() {return false;};
     virtual bool fragmentShader(std::string& code) const throw() {return false;};
