@@ -104,7 +104,7 @@ namespace LGL {
                 }
                 case GL_TEXTURE1:
                 {
-                    glActiveTexture(GL_TEXTURE0 + unitIdx);
+                    glActiveTexture(GL_TEXTURE1);
                     glBindTexture(GL_TEXTURE_2D, m_Texture);
                     break;
                 }
@@ -214,16 +214,28 @@ int main()
         LGL::Uniform(program, "ourTexture2").Set(1);
 
         glm::mat4 transfMat;
-        transfMat = glm::rotate( transfMat, 90.0f, glm::vec3( 0.0, 0.0, 1.0 ) );
+        transfMat = glm::rotate( transfMat, glm::radians( 90.0f ), glm::vec3( 0.0, 0.0, 1.0 ) );
         transfMat = glm::scale( transfMat, glm::vec3( 0.5, 0.5, 0.5 ) );
+        
                 
         while (!glfwWindowShouldClose(window))
         {
             glfwPollEvents();
+            GLfloat timeValue = static_cast<GLfloat>( glfwGetTime() );
+            GLfloat positionOffsetValue = (sin(timeValue) / 2);
+
+            glm::mat4 translateOp;
+            translateOp = glm::rotate( translateOp, glm::radians( timeValue * 50.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
+            translateOp = glm::translate(translateOp, glm::vec3( 0.5f, -0.5f, 0.0 ) );
+            //translateOp = glm::rotate( translateOp, glm::radians( timeValue * 50.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) ); // original tut order
+
+            glm::mat4 secondContainerOp;
+            secondContainerOp = glm::translate( secondContainerOp, glm::vec3( -0.5f, 0.5f, 0.0 ) );
+            secondContainerOp = glm::scale( secondContainerOp, glm::vec3( std::abs( positionOffsetValue ), std::abs( positionOffsetValue ), std::abs( positionOffsetValue ) ) );
 
             // read from global variable and set the uniform for mixing the two textures
             GLuint transformLoc = glGetUniformLocation( program.GetProgram(), "transform");
-            glUniformMatrix4fv( transformLoc, 1, GL_FALSE, glm::value_ptr( transfMat ) );
+            glUniformMatrix4fv( transformLoc, 1, GL_FALSE, glm::value_ptr( translateOp ) ); // was transfMat for tutorial
 
             glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -233,9 +245,13 @@ int main()
 
             program.Use();
 
-            GLfloat timeValue = static_cast<GLfloat>( glfwGetTime() );
-            GLfloat positionOffsetValue = (sin(timeValue) / 2);
+            
             //u.Set( positionOffsetValue );
+
+            vao.Draw();
+
+            // for 2nd container modify transf and update the  uniform
+            glUniformMatrix4fv( transformLoc, 1, GL_FALSE, glm::value_ptr( secondContainerOp ) ); // was transfMat for tutorial
 
             vao.Draw();
             
