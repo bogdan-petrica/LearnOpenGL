@@ -233,16 +233,30 @@ int main()
             texture1.Use(0);
             texture2.Use(1);
 
-            glm::mat4 trans;
-            trans = glm::translate(trans, glm::vec3(-0.25f, 0.0f, 0.0f));
-            trans = glm::scale(trans, 2.0f * glm::vec3(1.0f, 1.0f, 1.0f));
-            trans = glm::rotate(trans, glm::radians((float)glfwGetTime() * 50.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-
-            transform.Set( glm::value_ptr( trans) ) ;
-
             program.Use();
-            
-            vao.Draw();
+
+            glm::mat4 trans;
+
+            {
+                trans = glm::rotate(trans, glm::radians((float)glfwGetTime() * 50.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+                trans = glm::translate(trans, glm::vec3(-0.5f, -0.5f, 0.0f));
+                trans = glm::scale(trans, 0.5f * glm::vec3(1.0f, 1.0f, 1.0f));
+
+                transform.Set(glm::value_ptr(trans));
+
+                vao.Draw();
+            }
+
+            {
+                trans = glm::mat4();
+
+                trans = glm::translate(trans, glm::vec3(-0.5f, +0.5f, 0.0f));
+                trans = glm::scale(trans, abs( sin( (float)glfwGetTime() ) ) * glm::vec3(1.0f, 1.0f, 1.0f) );
+
+                transform.Set(glm::value_ptr(trans));
+
+                vao.Draw();
+            }
             
             glfwSwapBuffers(window);
         }
