@@ -30,6 +30,11 @@ namespace LGL {
             glUniform1i(m_Location, x);
         }
 
+        void Set( GLfloat * value )
+        {
+            glUniformMatrix4fv(m_Location, 1, GL_FALSE, value);
+        }
+
     private:
         GLuint m_Location;
     };
