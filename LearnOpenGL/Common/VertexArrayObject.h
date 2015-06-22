@@ -117,6 +117,18 @@ namespace LGL {
             glBindVertexArray(0);
         }
 
+        void DrawTriangles()
+        {
+            typedef GLuint IndexType[3];
+
+            assert(m_Vao != NULL);
+            assert(m_Count != 0);;
+
+            glBindVertexArray(m_Vao);
+            glDrawArrays(GL_TRIANGLES, 0, m_Count);
+            glBindVertexArray(0);
+        }
+
     private:
         GLuint m_Vao;
         GLuint m_Ebo;
