@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <time.h>
+#include <set>
 
 class ColorMaterial: public Material
 {
@@ -167,6 +168,19 @@ public:
             {glm::vec3(-KRadius,  KRadius, KRadius), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f)}   // top-left-front
         };
 
+        // Specify vertices in the clock-inverse order
+        const GLuint cubeIndices[] = {
+            2, 1, 0, 0, 4, 2, /*back face*/
+            0, 5, 8, 8, 4, 0, /*left face*/
+            8, 7, 2, 2, 4, 8, /*top face*/
+            6, 1, 2, 2, 7, 6, /*right face*/
+            0, 1, 6, 6, 5, 0, /*bottom face*/
+            5, 6, 7, 7, 8, 5 /*front face*/ };
+
+        const GLuint rectangleIndices[] = {
+            0/*bottom-left*/, 1/*bottom-right*/, 2/*top-right*/,
+            2/*top-right*/, 4/*top-left*/, 0/*bottom-left*/ };
+
         std::shared_ptr<Texture> triangleTextures = std::make_shared<Texture>();
         triangleTextures->loadFromFile(mCrateTexturePath);
         triangleTextures->loadFromFile(mSmileTexturePath, true);
@@ -192,23 +206,13 @@ public:
             triangle->setup(params);
         }
         {
-            const GLuint rectangleIndices[] = {
-                0/*bottom-left*/, 1/*bottom-right*/, 2/*top-right*/,
-                2/*top-right*/, 4/*top-left*/, 0/*bottom-left*/ };
             params.indices = rectangleIndices;
             params.indicesCount = sizeof(rectangleIndices)/sizeof(rectangleIndices[0]);
             params.obj = triangle; // We reuse the same vertex buffer that triangle uses
             rectangle->setup(params);
         }
         {
-            // Specify vertices in the clock-inverse order
-            const GLuint cubeIndices[] = {
-                2, 1, 0, 0, 4, 2, /*back face*/
-                0, 5, 8, 8, 4, 0, /*left face*/
-                8, 7, 2, 2, 4, 8, /*top face*/
-                6, 1, 2, 2, 7, 6, /*right face*/
-                0, 1, 6, 6, 5, 0, /*bottom face*/
-                5, 6, 7, 7, 8, 5 /*front face*/ };
+
             params.indices = cubeIndices;
             params.indicesCount = sizeof(cubeIndices)/sizeof(cubeIndices[0]);
             params.obj = triangle; // We reuse the same vertex buffer that triangle uses
@@ -254,6 +258,11 @@ class App: public Window::IKeyCallback, public Renderer::IRenderEvents
 {
 public:
 
+    App()
+        : mLastFrameTime(0.0)
+        , mCameraFront(0.0f, 0.0f, -1.0f)
+        , mCameraUp(0.0f, 1.0f, 0.0f)
+    {}
     int
     exec()
     {
@@ -272,6 +281,8 @@ public:
 
             mCamera.reset(new Camera(0, 0, screenWidth, screenHeight,
                 45.0f, static_cast<float>(screenWidth)/static_cast<float>(screenHeight), 0.1f, 100.0f));
+            mCamera->setPos(glm::vec3(0.0f, 0.0f, 2.0f));
+            mCamera->setLookAt(mCamera->pos() + mCameraFront);
 
             Renderer render;
             render.init(window, scene, mCamera);
@@ -295,40 +306,13 @@ public:
     void
     keyAction(GLFWwindow* window, int key, int scancode, int action, int mode)
     {
-        if(action == GLFW_PRESS || action == GLFW_REPEAT)
+        if(action == GLFW_PRESS)
         {
-            static const float degrees = glm::pi<float>()/18.0f;
-            bool done = true;
-            switch(key)
-            {
-            case GLFW_KEY_UP:
-            case GLFW_KEY_DOWN:
-                {
-                    mSceneData.mTriangleObj->rotate.x += degrees * (key == GLFW_KEY_UP ? -1.0f : 1.0f);
-                } break;
-            case GLFW_KEY_LEFT:
-            case GLFW_KEY_RIGHT:
-                {
-                    mSceneData.mTriangleObj->rotate.y += degrees * (key == GLFW_KEY_LEFT ? -1.0f : 1.0f);
-                } break;
-            case GLFW_KEY_W:
-            case GLFW_KEY_S:
-                {
-                    mSceneData.mTriangleObj->translate.z += degrees * (key == GLFW_KEY_W ? 1.0f : -1.0f);
-                } break;
-            case GLFW_KEY_A:
-            case GLFW_KEY_D:
-                {
-                    mSceneData.mTriangleObj->translate.x += degrees * (key == GLFW_KEY_A ? 1.0f : -1.0f);
-                } break;
-            case GLFW_KEY_KP_ADD:
-            case GLFW_KEY_KP_SUBTRACT:
-                {
-                    for(int j = 0; j < mSceneData.mCubeObj->scale.length(); ++j)
-                        mSceneData.mCubeObj->scale[j] += (key == GLFW_KEY_KP_ADD) ? 0.1f : -0.1f;
-                } break;
-            default: break;
-            }
+            mPressedKeys.insert(key);
+        }
+        else if(action == GLFW_RELEASE)
+        {
+            mPressedKeys.erase(key);
         }
 
         // When a user presses the escape key, we set the WindowShouldClose property to true, 
@@ -341,18 +325,80 @@ public:
 
     void beginFrame()
     {
+        double seconds = mLastFrameTime != 0.0 ? glfwGetTime() - mLastFrameTime : 0.0;
+
         assert(mCamera != nullptr);
         mSceneData.mCubeObj->rotate.x = glm::radians((GLfloat)glfwGetTime() * 25.0f);
         mSceneData.mCubeObj->rotate.y = glm::radians((GLfloat)glfwGetTime() * 50.0f);
-        static const GLfloat radius = 3.0f;
-        mCamera->setPos(glm::vec3(sin(glfwGetTime()) * radius, 0.0f, cos(glfwGetTime()) * radius));
+
+        porcessMovement(static_cast<float>(seconds));
+
+        mLastFrameTime = glfwGetTime();
+    }
+
+    void
+    porcessMovement(float seconds)
+    {
+        std::set<int>::const_iterator itEnd = mPressedKeys.end();
+        for(std::set<int>::const_iterator it = mPressedKeys.begin(); it != itEnd; ++it)
+        {
+            int key = *it;
+            switch(key)
+            {
+            case GLFW_KEY_UP:
+            case GLFW_KEY_DOWN:
+                {
+
+                } break;
+            case GLFW_KEY_LEFT:
+            case GLFW_KEY_RIGHT:
+                {
+
+                } break;
+            case GLFW_KEY_W:
+            case GLFW_KEY_S:
+                {
+                    glm::vec3 pos = mCamera->pos();
+                    pos += (key == GLFW_KEY_W ? 1.0f : -1.0f ) * seconds * mCameraSpeed * mCameraFront;
+                    mCamera->setPos(pos);
+                    mCamera->setLookAt(pos + mCameraFront);
+                } break;
+            case GLFW_KEY_A:
+            case GLFW_KEY_D:
+                {
+                    glm::vec3 pos = mCamera->pos();
+                    pos += (key == GLFW_KEY_D ? 1.0f : -1.0f ) * seconds * mCameraSpeed
+                        * glm::normalize(glm::cross(mCameraFront, mCameraUp));
+                    mCamera->setPos(pos);
+                    mCamera->setLookAt(pos + mCameraFront);
+                } break;
+            case GLFW_KEY_KP_ADD:
+            case GLFW_KEY_KP_SUBTRACT:
+                {
+                    for(int j = 0; j < mSceneData.mCubeObj->scale.length(); ++j)
+                        mSceneData.mCubeObj->scale[j] += (key == GLFW_KEY_KP_ADD) ? 0.1f : -0.1f;
+                } break;
+            default: break;
+            }
+        }
     }
 
 private:
     std::shared_ptr<Window> mWindow;
-    std::shared_ptr<Camera> mCamera;
     SceneData mSceneData;
+
+    // Process keys
+    std::set<int> mPressedKeys;
+    double mLastFrameTime;
+
+    // FPS camera
+    std::shared_ptr<Camera> mCamera;
+    glm::vec3 mCameraFront;
+    const glm::vec3 mCameraUp;
+    static const float mCameraSpeed; // Units per second
 };
+
+/*static*/const float App::mCameraSpeed = 1.0f; // Units per second
 
 int main()
 {
