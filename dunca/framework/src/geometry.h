@@ -33,6 +33,7 @@ public:
         , mEbo(-1)
         , mCoordinatesCount(0) // mIndicesCount(0)
         , mMaterial(material)
+        , mBackfaceCulled(true)
     {
     }
 

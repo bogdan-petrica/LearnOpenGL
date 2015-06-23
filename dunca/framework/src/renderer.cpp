@@ -78,12 +78,10 @@ Renderer::draw()
 
     glm::mat4 viewMat;
     {
-        const glm::vec4& v = mCamera->viewport();
+        const glm::ivec4& v = mCamera->viewport();
         glViewport(v[0], v[1], v[2], v[3]);
 
-        // TODO: Take position from camera
-        viewMat = mCamera->projection();
-        viewMat = glm::translate(viewMat, glm::vec3(0.0f, 0.0f, -3.0f));
+        viewMat = mCamera->projection() * mCamera->view();
     }
 
     std::vector<Item>& items = mScene->items();
@@ -113,10 +111,10 @@ Renderer::draw()
                 obj->prepare();
                 if(material != nullptr)
                 {
-                    glm::mat4 tmpMat;
-                    obj->computeModelMatrix(tmpMat);
                     if(material->hasModelUniformLoc())
                     {
+                        glm::mat4 tmpMat;
+                        obj->computeModelMatrix(tmpMat);
                         glUniformMatrix4fv(material->modelUniformLoc(), 1, GL_FALSE, glm::value_ptr(tmpMat));
                     }
 

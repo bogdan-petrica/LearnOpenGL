@@ -147,14 +147,6 @@ public:
     void
     setup(Scene& scene) throw()
     {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // Enable blending
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
         const static float KRadius = 0.9f;
         struct GeometryData 
         {
@@ -222,19 +214,21 @@ public:
             params.obj = triangle; // We reuse the same vertex buffer that triangle uses
             cube->setup(params);
         }
-        scene.add(Item(rectangle));
+        std::shared_ptr<Object> rectangleObj(new Object());
+        rectangleObj->translate.z = 50.0f;
+        scene.add(Item(rectangle, rectangleObj));
         scene.add(Item(triangle, mTriangleObj));
         mCubeObj->scale.x = 0.5f; mCubeObj->scale.y = 0.5f; mCubeObj->scale.z = 0.5f;
         scene.add(Item(cube, mCubeObj));
-        std::srand(time(NULL));
+        std::srand(static_cast<unsigned int>(time(NULL)));
         for(int i = 0; i < 10; ++i )
         {
             std::shared_ptr<Object> obj(new Object());
             for(int j = 0; j < obj->translate.length(); ++j)
                 obj->translate[j] = (static_cast<float>(std::rand() % 200) - 100.0f)/100.0f;
-            float pi1000 = static_cast<int>(glm::pi<float>() * 1000.0f);
+            int pi1000 = static_cast<int>(glm::pi<float>() * 1000.0f);
             for(int j = 0; j < obj->rotate.length(); ++j)
-                obj->rotate[j] = static_cast<float>(std::rand() % static_cast<int>(pi1000))/pi1000;
+                obj->rotate[j] = static_cast<float>(std::rand() % pi1000)/static_cast<float>(pi1000);
             for(int j = 0; j < obj->scale.length(); ++j)
                 obj->scale[j] = 0.05f + 0.1f * static_cast<float>(std::rand() % 50)/100.0f;
             scene.add(Item(cube, obj));
@@ -265,8 +259,8 @@ public:
     {
         try
         {
-            float screenWidth = 800;
-            float screenHeight = 600;
+            int screenWidth = 800;
+            int screenHeight = 600;
             std::shared_ptr<Window> window = Window::init(screenWidth, screenHeight);
             window->addKeyHandler(this);
 
@@ -276,11 +270,11 @@ public:
             // Setup scene
             mSceneData.setup(*scene);
 
-            std::shared_ptr<Camera> camera(new Camera(0, 0, screenWidth, screenHeight,
-                45.0f, screenWidth/screenHeight, 0.1f, 100.0f));
+            mCamera.reset(new Camera(0, 0, screenWidth, screenHeight,
+                45.0f, static_cast<float>(screenWidth)/static_cast<float>(screenHeight), 0.1f, 100.0f));
 
             Renderer render;
-            render.init(window, scene, camera);
+            render.init(window, scene, mCamera);
             render.addRenderEventListerner(this);
 
             render.runLoop();
@@ -303,32 +297,29 @@ public:
     {
         if(action == GLFW_PRESS || action == GLFW_REPEAT)
         {
+            static const float degrees = glm::pi<float>()/18.0f;
             bool done = true;
             switch(key)
             {
             case GLFW_KEY_UP:
             case GLFW_KEY_DOWN:
                 {
-                    static const float degreese = glm::pi<float>()/18.0;
-                    mSceneData.mTriangleObj->rotate.x += degreese * (key == GLFW_KEY_UP ? -1.0f : 1.0f);
+                    mSceneData.mTriangleObj->rotate.x += degrees * (key == GLFW_KEY_UP ? -1.0f : 1.0f);
                 } break;
             case GLFW_KEY_LEFT:
             case GLFW_KEY_RIGHT:
                 {
-                    static const float degreese = glm::pi<float>()/18.0;
-                    mSceneData.mTriangleObj->rotate.y += degreese * (key == GLFW_KEY_LEFT ? -1.0f : 1.0f);
+                    mSceneData.mTriangleObj->rotate.y += degrees * (key == GLFW_KEY_LEFT ? -1.0f : 1.0f);
                 } break;
             case GLFW_KEY_W:
             case GLFW_KEY_S:
                 {
-                    static const float degreese = glm::pi<float>()/18.0;
-                    mSceneData.mTriangleObj->translate.z += degreese * (key == GLFW_KEY_W ? 1.0f : -1.0f);
+                    mSceneData.mTriangleObj->translate.z += degrees * (key == GLFW_KEY_W ? 1.0f : -1.0f);
                 } break;
             case GLFW_KEY_A:
             case GLFW_KEY_D:
                 {
-                    static const float degreese = glm::pi<float>()/18.0;
-                    mSceneData.mTriangleObj->translate.x += degreese * (key == GLFW_KEY_A ? 1.0f : -1.0f);
+                    mSceneData.mTriangleObj->translate.x += degrees * (key == GLFW_KEY_A ? 1.0f : -1.0f);
                 } break;
             case GLFW_KEY_KP_ADD:
             case GLFW_KEY_KP_SUBTRACT:
@@ -350,12 +341,16 @@ public:
 
     void beginFrame()
     {
+        assert(mCamera != nullptr);
         mSceneData.mCubeObj->rotate.x = glm::radians((GLfloat)glfwGetTime() * 25.0f);
         mSceneData.mCubeObj->rotate.y = glm::radians((GLfloat)glfwGetTime() * 50.0f);
+        static const GLfloat radius = 3.0f;
+        mCamera->setPos(glm::vec3(sin(glfwGetTime()) * radius, 0.0f, cos(glfwGetTime()) * radius));
     }
 
 private:
     std::shared_ptr<Window> mWindow;
+    std::shared_ptr<Camera> mCamera;
     SceneData mSceneData;
 };
 
