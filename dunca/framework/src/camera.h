@@ -28,6 +28,19 @@ public:
     const glm::vec3&
     lookAt() const;
 
+    void
+    setAspectRatio(float value);
+    float
+    aspectRatio() const;
+
+    void
+    setFov(float value);
+    float
+    fov() const;
+
+    const glm::vec3&
+    getUpVec() const;
+
 private:
     void
     computeViewMatrix(glm::mat4& viewMat) const;
@@ -35,13 +48,20 @@ private:
 private:
     glm::ivec4 mViewport;
 
-    glm::mat4 mProjection;
+    mutable glm::mat4 mProjection;
+    mutable bool mProjDirty;
+    float mFov;
+    float mAspect;
+    float mNear;
+    float mFar;
 
     mutable glm::mat4 mView;
-    mutable bool mDirty;
+    mutable bool mViewDirty;
 
     glm::vec3 mPos;
     glm::vec3 mTarget;
+
+    static const glm::vec3 mCameraUpVec;
 };
 
 //******************************************************************************
@@ -53,19 +73,12 @@ Camera::viewport() const
 
 //******************************************************************************
 inline const glm::mat4&
-Camera::projection() const
-{
-    return mProjection;
-}
-
-//******************************************************************************
-inline const glm::mat4&
 Camera::view() const
 {
-    if(mDirty)
+    if(mViewDirty)
     {
         computeViewMatrix(mView);
-        mDirty = false;
+        mViewDirty = false;
     }
     return mView;
 }
@@ -76,7 +89,7 @@ Camera::setPos(glm::vec3 pos)
 {
     if(pos != mPos)
     {
-        mDirty = true;
+        mViewDirty = true;
         mPos = pos;
     }
 }
@@ -94,7 +107,7 @@ Camera::setLookAt(glm::vec3 target)
 {
     if(target != mTarget)
     {
-        mDirty = true;
+        mViewDirty = true;
         mTarget = target;
     }
 }
@@ -104,6 +117,49 @@ inline const glm::vec3&
 Camera::lookAt() const
 {
     return mTarget;
+}
+
+//******************************************************************************
+inline void
+Camera::setAspectRatio(float value)
+{
+    if(mAspect != value)
+    {
+        mAspect = value;
+        mProjDirty = true;
+    }
+}
+
+//******************************************************************************
+inline float
+Camera::aspectRatio() const
+{
+    return mAspect;
+}
+
+//******************************************************************************
+inline void
+Camera::setFov(float value)
+{
+    if(mFov != value)
+    {
+        mFov = value;
+        mProjDirty = true;
+    }
+}
+
+//******************************************************************************
+inline float
+Camera::fov() const
+{
+    return mFov;
+}
+
+//******************************************************************************
+inline const glm::vec3&
+Camera::getUpVec() const
+{
+    return mCameraUpVec;
 }
 
 #endif

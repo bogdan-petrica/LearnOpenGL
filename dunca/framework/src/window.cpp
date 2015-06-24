@@ -42,7 +42,7 @@ Window::term()
 
 //******************************************************************************
 void
-Window::addKeyHandler(IKeyCallback* handler)
+Window::addKeyHandler(IInputCallback* handler)
 {
     mKeyCallbacks.push_back(handler);
 }
@@ -55,6 +55,28 @@ Window::key_callback(GLFWwindow* window, int key, int scancode, int action, int 
     {
         assert(mThis->mKeyCallbacks[i] != nullptr);
         mThis->mKeyCallbacks[i]->keyAction(window, key, scancode, action, mode);
+    }
+}
+
+//******************************************************************************
+void
+Window::mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    for (int i = 0; i < mThis->mKeyCallbacks.size(); ++i)
+    {
+        assert(mThis->mKeyCallbacks[i] != nullptr);
+        mThis->mKeyCallbacks[i]->mouseAction(window, xpos, ypos);
+    }
+}
+
+//******************************************************************************
+void
+Window::scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    for (int i = 0; i < mThis->mKeyCallbacks.size(); ++i)
+    {
+        assert(mThis->mKeyCallbacks[i] != nullptr);
+        mThis->mKeyCallbacks[i]->scrollAction(window, xoffset, yoffset);
     }
 }
 
@@ -82,7 +104,13 @@ Window::initGlfw(int w, int h)
         if(glewInit() != GLEW_OK)
             throw new WindowCreationException("glewInit");
 
+        // Set keyboard
         glfwSetKeyCallback( mWindow, &key_callback );
+        // Set mouse
+        glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetCursorPosCallback(mWindow, &mouse_callback);
+        // Scroll setup
+        glfwSetScrollCallback(mWindow, scroll_callback);
     }
 }
 

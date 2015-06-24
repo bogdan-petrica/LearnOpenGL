@@ -3,16 +3,35 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+/*static*/ const glm::vec3 Camera::mCameraUpVec(0.0f, 1.0f, 0.0f);
+
 Camera::Camera(int x, int y, int w, int h,
        float fov, float aspect, float near, float far)
     : mViewport(x, y, w, h)
-    , mDirty(true)
+    , mProjDirty(true)
+    , mFov(fov)
+    , mAspect(aspect)
+    , mNear(near)
+    , mFar(far)
+    , mViewDirty(true)
     , mPos(0.0f, 0.0f, 0.0f)
     , mTarget(0.0f, 0.0f, 0.0f)
 {
-     mProjection = glm::perspective(fov, aspect, near, far);
 }
 
+//******************************************************************************
+const glm::mat4&
+Camera::projection() const
+{
+    if(mProjDirty)
+    {
+        mProjection = glm::perspective(mFov, mAspect, mNear, mFar);
+        mProjDirty = false;
+    }
+    return mProjection;
+}
+
+//******************************************************************************
 void
 Camera::computeViewMatrix(glm::mat4& viewMat) const
 {
@@ -29,6 +48,6 @@ Camera::computeViewMatrix(glm::mat4& viewMat) const
 
     viewMat = leftMat * rightMat;
     */
-    viewMat = glm::lookAt(mPos, mTarget, glm::vec3(0.0f, 1.0f, 0.0f));
+    viewMat = glm::lookAt(mPos, mTarget, mCameraUpVec);
 }
 

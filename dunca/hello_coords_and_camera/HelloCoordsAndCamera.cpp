@@ -148,7 +148,7 @@ public:
     void
     setup(Scene& scene) throw()
     {
-        const static float KRadius = 0.9f;
+        const float KRadius = 0.9f;
         struct GeometryData 
         {
             glm::vec3 vertex;
@@ -254,14 +254,15 @@ public:
 const char* SceneData::mCrateTexturePath = "../../../dunca/res/container.jpg";
 const char* SceneData::mSmileTexturePath = "../../../dunca/res/awesome_face.png";
 
-class App: public Window::IKeyCallback, public Renderer::IRenderEvents
+class App: public Window::IInputCallback, public Renderer::IRenderEvents
 {
 public:
 
     App()
         : mLastFrameTime(0.0)
         , mCameraFront(0.0f, 0.0f, -1.0f)
-        , mCameraUp(0.0f, 1.0f, 0.0f)
+        , mYaw(-90.0f)
+        , mPitch(0.0f)
     {}
     int
     exec()
@@ -323,6 +324,55 @@ public:
         }
     }
 
+    void
+    mouseAction(GLFWwindow* window, double xpos, double ypos)
+    {
+        static bool firstMouse = true;
+        if(firstMouse)
+        {
+            mLastMouse.x = xpos;
+            mLastMouse.y = ypos;
+            firstMouse = false;
+        }
+
+        GLfloat xoffset = xpos - mLastMouse.x;
+        GLfloat yoffset = mLastMouse.y - ypos; 
+        mLastMouse.x = xpos;
+        mLastMouse.y = ypos;
+
+        GLfloat sensitivity = 0.05;
+        xoffset *= sensitivity;
+        yoffset *= sensitivity;
+
+        mYaw   += xoffset;
+        mPitch += yoffset;
+
+        if(mYaw > 89.0f)
+            mYaw = 89.0f;
+        if(mPitch < -89.0f)
+            mPitch = -89.0f;
+
+        glm::vec3 front;
+        front.x += cos(glm::radians(mYaw)) * cos(glm::radians(mPitch));
+        front.y += sin(glm::radians(mPitch));
+        front.z += sin(glm::radians(mYaw)) * cos(glm::radians(mPitch));
+        mCameraFront = glm::normalize(front);
+        mCamera->setLookAt(mCamera->pos() + mCameraFront);
+    }
+
+    void
+    scrollAction(GLFWwindow* window, double xoffset, double yoffset)
+    {
+        float fov = mCamera->fov();
+        if(fov >= 1.0f && fov <= 45.0f)
+            fov -= yoffset;
+        if(fov <= 1.0f)
+            fov = 1.0f;
+        if(fov >= 45.0f)
+            fov = 45.0f;
+        mCamera->setFov(fov);
+    }
+
     void beginFrame()
     {
         double seconds = mLastFrameTime != 0.0 ? glfwGetTime() - mLastFrameTime : 0.0;
@@ -348,7 +398,7 @@ public:
             case GLFW_KEY_UP:
             case GLFW_KEY_DOWN:
                 {
-
+                    
                 } break;
             case GLFW_KEY_LEFT:
             case GLFW_KEY_RIGHT:
@@ -368,7 +418,7 @@ public:
                 {
                     glm::vec3 pos = mCamera->pos();
                     pos += (key == GLFW_KEY_D ? 1.0f : -1.0f ) * seconds * mCameraSpeed
-                        * glm::normalize(glm::cross(mCameraFront, mCameraUp));
+                        * glm::normalize(glm::cross(mCameraFront, mCamera->getUpVec()));
                     mCamera->setPos(pos);
                     mCamera->setLookAt(pos + mCameraFront);
                 } break;
@@ -390,11 +440,14 @@ private:
     // Process keys
     std::set<int> mPressedKeys;
     double mLastFrameTime;
+    glm::vec2 mLastMouse;
 
     // FPS camera
     std::shared_ptr<Camera> mCamera;
     glm::vec3 mCameraFront;
-    const glm::vec3 mCameraUp;
+    glm::vec3 mDirection;
+    double mYaw;
+    double mPitch;
     static const float mCameraSpeed; // Units per second
 };
 
