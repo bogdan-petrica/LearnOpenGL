@@ -284,6 +284,60 @@ int main()
                 { 0.5f, 0.5f, -0.5f },
                 { 0.0f, 0.0f, 1.0f },
                 { 0.0f, 1.0f }
+            },
+
+
+
+            {
+                // top face
+                { -0.5f, 0.5f, 0.5f },             // coordinate
+                { 1.0f, 0.0f, 0.0f },               // color
+                { 0.0f, 0.0f }                      // texture coordinate
+            },
+            {
+                // bottom right
+                { 0.5f, 0.5f, 0.5f },
+                { 0.0f, 1.0f, 0.0f },
+                { 1.0f, 0.0f }
+            },
+            {
+                // top right
+                { 0.5f, 0.5f, -0.5f },
+                { 1.0f, 1.0f, 0.0f },
+                { 1.0f, 1.0f }
+            },
+
+            {
+                // top left
+                { -0.5f, 0.5f, -0.5f },
+                { 0.0f, 0.0f, 1.0f },
+                { 0.0f, 1.0f }
+            },
+
+            {
+                // bottom face
+                { -0.5f, -0.5f, 0.5f },             // coordinate
+                { 1.0f, 0.0f, 0.0f },               // color
+                { 0.0f, 0.0f }                      // texture coordinate
+            },
+            {
+                // bottom right
+                { 0.5f, -0.5f, 0.5f },
+                { 0.0f, 1.0f, 0.0f },
+                { 1.0f, 0.0f }
+            },
+            {
+                // top right
+                { 0.5f, -0.5f, -0.5f },
+                { 1.0f, 1.0f, 0.0f },
+                { 1.0f, 1.0f }
+            },
+
+            {
+                // top left
+                { -0.5f, -0.5f, -0.5f },
+                { 0.0f, 0.0f, 1.0f },
+                { 0.0f, 1.0f }
             }
         };
         
@@ -304,6 +358,14 @@ int main()
             // BackFace
             { 12, 13, 15 },
             { 14, 15, 13 },
+
+            // TopFace
+            { 16, 17, 19 },
+            { 18, 19, 17 },
+
+            // TopFace
+            { 20, 21, 23 },
+            { 22, 23, 21 }
         };
 
         glEnable(GL_DEPTH_TEST);  
@@ -316,7 +378,7 @@ int main()
         vao.BindBuffer(0, vertices, VerticesCount, &VertexEntry::m_Position);
         vao.BindBuffer(1, vertices, VerticesCount, &VertexEntry::m_Color);
         vao.BindBuffer(2, vertices, VerticesCount, &VertexEntry::m_TextCoord);
-        vao.BindIndex(indices, 8);
+        vao.BindIndex(indices, 12);
         vao.Done();
 
         LGL::Uniform(program, "ourTexture1").Set(0);
