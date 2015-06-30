@@ -20,24 +20,57 @@
 
 GLfloat alpha = 0.5f;
 
+
+glm::vec3 cameraPos(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
+
+static bool keys[1024];
+
+GLfloat lastframe = 0.0f;
+
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
-    // When a user presses the escape key, we set the WindowShouldClose property to true, 
-    // closing the application
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+    if (action == GLFW_PRESS)
+        keys[key] = true;
+    else if (action == GLFW_RELEASE)
+        keys[key] = false;       
+
+    if (keys[GLFW_KEY_ESCAPE])
         glfwSetWindowShouldClose(window, GL_TRUE);
-    else  if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
+}
+
+void DoMovement()
+{
+    if (keys[GLFW_KEY_LEFT]) {
         alpha += 0.05f;
         if (alpha > 1.0f)
             alpha = 1.0f;
     }
-    else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
-    {
+
+    if (keys[GLFW_KEY_RIGHT]) {
         alpha -= 0.05f;
         if (alpha < 0.0f)
             alpha = 0.0f;
     }
-        
+
+    GLfloat now = glfwGetTime();
+    GLfloat delta = now - lastframe;
+    lastframe = now;
+    GLfloat cameraSpeed = 5.0f * delta;
+
+    if (keys[GLFW_KEY_W])
+        cameraPos += cameraSpeed * cameraFront;
+
+    if (keys[GLFW_KEY_S])
+        cameraPos -= cameraSpeed * cameraFront;
+
+    if (keys[GLFW_KEY_A])
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+
+    if (keys[GLFW_KEY_D])
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+
 }
 
 
@@ -389,11 +422,6 @@ int main()
         LGL::Uniform view(program, "view");
         LGL::Uniform proj(program, "proj");
 
-
-        glm::mat4 viewMat;
-        viewMat = glm::translate( viewMat, glm::vec3( 0.0f, 0.0f, -3.0f ) );
-        //viewMat = glm::rotate( viewMat, glm::radians( 45.0f ), glm::vec3( 0.0, 1.0f, 0.0 ));
-        
         glm::mat4 projMat;
         projMat = glm::perspective( 45.0f, 800.0f / 600.0f, 0.1f, 100.0f );
 
@@ -414,6 +442,8 @@ int main()
         {
             glfwPollEvents();
 
+            DoMovement();
+
             // read from global variable and set the uniform for mixing the two textures
             mixValue.Set(alpha);
 
@@ -424,6 +454,14 @@ int main()
             texture2.Use(1);
 
             program.Use();
+
+            glm::mat4 viewMat;
+            //GLfloat radius = 10.0f;
+            //GLfloat cameraX = sin((float)glfwGetTime()) * radius;
+            //GLfloat cameraZ = cos((float)glfwGetTime()) * radius;
+            //viewMat = glm::lookAt(glm::vec3(cameraX, 0.0f, cameraZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            viewMat = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
 
             view.Set( glm::value_ptr( viewMat ) );
             proj.Set( glm::value_ptr( projMat) );
